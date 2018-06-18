@@ -7,6 +7,7 @@ rule
   \}        { [:RC_BRACE, text] }
   \(        { [:L_BRACE, text] }
   \)        { [:R_BRACE, text] }
+  '[\s\w]*' { [:STRING, text[1..-2]] }
   class     { [:CLASS, text] }
   public    { [:PUBLIC, text] }
   return    { [:RETURN, text] }
@@ -21,5 +22,6 @@ rule
   =         { [:ASSIGN, text] }
   ;         { [:SEMICOLON, text]}
   ,         { [:COMMA, text] }
+  \.         { [:DOT, text] }
   .         { [text, text] }
 end

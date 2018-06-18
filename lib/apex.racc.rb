@@ -2,7 +2,7 @@ class ApexCompiler
 
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   U_IDENT CLASS PUBLIC LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
-  RETURN
+  RETURN DOT STRING
 
 rule
   define_class : PUBLIC CLASS U_IDENT LC_BRACE class_stmts RC_BRACE { result = [[:class, val[0], val[2], val[4]]] }
@@ -18,6 +18,7 @@ rule
   stmt  : expr SEMICOLON { result = val[0] }
         | return_stmt SEMICOLON
         | definement
+        | call_class_method
   expr  : term { result = val[0] }
         | IDENT { result = [:ident, val[0]] }
         | IDENT ASSIGN term { result = [:assign, val[0], val[2]]}
@@ -29,11 +30,13 @@ rule
                | DOUBLE { result = val[0] }
   definement : U_IDENT IDENT SEMICOLON { result = [:define, val[1]] }
              | U_IDENT IDENT ASSIGN expr SEMICOLON { result = [:define, val[1], val[3]]}
+  call_class_method : U_IDENT DOT IDENT L_BRACE STRING R_BRACE SEMICOLON { result = [:class_method, val[0], val[2], val[4]] }
 end
 
 ---- header
 
 require './lib/apex.l'
+require './lib/element'
 
 ---- inner
 
@@ -42,6 +45,8 @@ require './lib/apex.l'
 parser = ApexCompiler.new
 
 statements = parser.scan_str(STDIN.read)
-statements.each do |statement|
-  pp statement
-end
+parts = statements[0][3][0][5][2]
+ApexClassTable[parts[1]].instance_methods[parts[2].to_sym].eval(parts[3])
+# statements.each do |statement|
+#   pp statement
+# end
