@@ -1,8 +1,11 @@
 class ApexCompiler
 
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
-  U_IDENT CLASS PUBLIC LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
-  RETURN DOT STRING
+  U_IDENT CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
+  RETURN DOT STRING REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
+  UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH SHARING
+  OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
+  INSTANCE_OF RETURN TRUE FALSE
 
 rule
   define_class : PUBLIC CLASS U_IDENT LC_BRACE class_stmts RC_BRACE { result = [[:class, val[0], val[2], val[4]]] }
@@ -22,6 +25,7 @@ rule
   expr  : term { result = val[0] }
         | IDENT { result = [:ident, val[0]] }
         | IDENT ASSIGN term { result = [:assign, val[0], val[2]]}
+        | IDENT INSTANCE_OF U_IDENT
   term  : primary_expr { result = val[0] }
         | INTEGER MUL INTEGER
         | INTEGER DIV INTEGER
@@ -31,6 +35,16 @@ rule
   definement : U_IDENT IDENT SEMICOLON { result = [:define, val[1]] }
              | U_IDENT IDENT ASSIGN expr SEMICOLON { result = [:define, val[1], val[3]]}
   call_class_method : U_IDENT DOT IDENT L_BRACE STRING R_BRACE SEMICOLON { result = [:class_method, val[0], val[2], val[4]] }
+  access_level : PUBLIC
+               | PRIVATE
+               | PROTECTED
+  modifier : ABSTRACT
+           | FINAL
+           | GLOBAL
+  sharing : WITH SHARING
+          | WITHOUT SHARING
+  boolean : FALSE
+          | TRUE
 end
 
 ---- header

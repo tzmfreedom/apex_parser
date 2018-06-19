@@ -33,7 +33,6 @@ rule
       protected        { [:PROTECTED, text] }
       global           { [:GLOBAL, text] }
       override         { [:OVERRIDE, text] }
-      global           { [:GLOBAL, text] }
       static           { [:STATIC, text] }
       final            { [:FINAL, text] }
       new              { [:NEW, text] }
