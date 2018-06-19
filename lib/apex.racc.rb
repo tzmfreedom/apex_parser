@@ -31,7 +31,7 @@ rule
               | class_stmts class_stmt { result = val[0].push(val[1]) }
   class_stmt : method_def { result = val[0] }
              | instance_variable_def { result = val[0] }
-  method_def : PUBLIC U_IDENT IDENT L_BRACE arguments R_BRACE LC_BRACE stmts RC_BRACE
+  method_def : PUBLIC U_IDENT IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                {
                  result = ApexMethod.new(
                    access_level: val[0],
@@ -41,6 +41,8 @@ rule
                    statements: val[7]
                  )
                }
+  empty_or_arguments :
+                     | arguments
   arguments : argument { result = [val[0]] }
             | arguments COMMA argument { result = val[0].push(val[1]) }
   argument : U_IDENT IDENT { result = [:argument, val[0], val[1]] }
@@ -57,18 +59,18 @@ rule
         | IDENT ASSIGN expr SEMICOLON { result = Statement.new(type: :assign, name: val[0], expression: val[2]) }
 
   expr  : number { result = val[0] }
-        | STRING
+        | STRING { result = ApexString.new(value: val[0]) }
         | call_class_method { result = val[0] }
         | call_method { result = val[0] }
-        | IDENT { result = [:ident, val[0]] }
+        | IDENT { result = Identify.new(name: val[0]) }
         | IDENT INSTANCE_OF U_IDENT
         | boolean
-  number : primary_expr { result = val[0] }
+  number : primary_expr { result = ApexInteger.new(value: val[0]) }
          | number MUL primary_expr {}
          | number DIV primary_expr {}
   return_stmt : RETURN expr { result = Statement.new(type: :return, expression: val[1]) }
   primary_expr : INTEGER
-               | DOUBLE { result = val[0] }
+               | DOUBLE
   variable_def : U_IDENT IDENT { result = Statement.new(type: :define, name: val[1]) }
                | U_IDENT IDENT ASSIGN expr { result = Statement.new(type: :define, name: val[1], expression: val[3]) }
 

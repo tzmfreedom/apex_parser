@@ -34,7 +34,10 @@ class ApexClass < ApexModel
 
   def call(method_name, arguments, local_scope)
     # argumentsをlocal_scopeで評価
-    apex_instance_methods[method_name.to_sym].call(arguments)
+    evaluated_arguments = arguments.map { |argument|
+      argument.call(local_scope)
+    }
+    apex_instance_methods[method_name.to_sym].call(evaluated_arguments)
   end
 end
 
@@ -63,7 +66,7 @@ class InstanceVariable < ApexModel
 end
 
 class Statement < ApexModel
-  attr_accessor :type, :receiver, :method_name, :arguments
+  attr_accessor :type, :receiver, :name, :method_name, :arguments, :expression
 
   def call(local_scope)
     case type
@@ -73,7 +76,31 @@ class Statement < ApexModel
         else
           ApexClassTable[receiver].call(method_name, arguments, local_scope)
         end
+      when :assign
+        local_scope[name.to_sym] = expression.call(local_scope)
+      when :define
+        if expression
+          local_scope[name.to_sym] = expression.call(local_scope)
+        else
+          local_scope[name.to_sym] = nil
+        end
     end
+  end
+end
+
+class Identify < ApexModel
+  attr_accessor :name
+
+  def call(local_scope)
+    local_scope[name.to_sym]
+  end
+end
+
+class ApexString < ApexModel
+  attr_accessor :value
+
+  def call(_)
+    value
   end
 end
 
@@ -84,7 +111,7 @@ end
 class ApexInteger < ApexModel
   attr_accessor :value
 
-  def call
+  def call(_)
     value
   end
 end
@@ -116,7 +143,9 @@ class ApexClassTable
   end
 end
 
-method_statements = [-> (args) { puts args[:arg1] }]
+method_statements = [
+  -> (local_scope) { puts local_scope[:arg1] }
+]
 
 statements = [
   ApexMethod.new(
