@@ -2,47 +2,89 @@ class ApexCompiler
 
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   U_IDENT CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
-  RETURN DOT STRING REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
-  UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH SHARING
+  RETURN DOT STRING THIS REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
+  UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
   INSTANCE_OF RETURN TRUE FALSE
 
 rule
-  define_class : PUBLIC CLASS U_IDENT LC_BRACE class_stmts RC_BRACE { result = [[:class, val[0], val[2], val[4]]] }
-  class_stmts : method { result = [val[0]] }
-              | class_stmts method { result val[0].push(val[1]) }
-  method : PUBLIC U_IDENT IDENT L_BRACE arguments R_BRACE LC_BRACE stmts RC_BRACE
-           { result = [:method, val[0], val[1], val[2], val[4], val[7]]}
+  class_or_trigger : class_def { result = val[0] }
+                   | trigger_def { result = val[0] }
+  type : U_IDENT
+  trigger_def : TRIGGER U_IDENT ON U_IDENT L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
+              {
+                result = [:trigger, val[1], val[3], val[7]]
+              }
+  class_def : access_level CLASS sharing U_IDENT LC_BRACE class_stmts RC_BRACE
+            {
+              result = ApexClass.new(
+                access_level: val[0],
+                sharing: val[2],
+                name: val[3],
+                statements: val[5]
+              )
+            }
+  instance_variable_def : access_level type IDENT SEMICOLON { result = InstanceVarible.new(access_level: val[0], type: val[1], name: val[2]) }
+                        | access_level type IDENT ASSIGN expr SEMICOLON
+                          { result = InstanceVariable.new(access_level: val[0], type: val[1], name: val[2], expression: val[4]) }
+  class_stmts : class_stmt { result = [val[0]] }
+              | class_stmts class_stmt { result = val[0].push(val[1]) }
+  class_stmt : method_def { result = val[0] }
+             | instance_variable_def { result = val[0] }
+  method_def : PUBLIC U_IDENT IDENT L_BRACE arguments R_BRACE LC_BRACE stmts RC_BRACE
+               {
+                 result = ApexMethod.new(
+                   access_level: val[0],
+                   return_type: val[1],
+                   name: val[2],
+                   arguments: val[4],
+                   statements: val[7]
+                 )
+               }
   arguments : argument { result = [val[0]] }
             | arguments COMMA argument { result = val[0].push(val[1]) }
   argument : U_IDENT IDENT { result = [:argument, val[0], val[1]] }
+
+  call_arguments : call_argument { result = [val[0]] }
+                 | call_arguments COMMA call_argument { result = val[0].push(val[1]) }
+  call_argument : expr { result = val[0] }
+
   stmts : stmt { result = [val[0]] }
         | stmts stmt { result = val[0].push(val[1]) }
   stmt  : expr SEMICOLON { result = val[0] }
         | return_stmt SEMICOLON
-        | definement
-        | call_class_method
-  expr  : term { result = val[0] }
+        | variable_def SEMICOLON
+        | IDENT ASSIGN expr SEMICOLON { result = Statement.new(type: :assign, name: val[0], expression: val[2]) }
+
+  expr  : number { result = val[0] }
+        | STRING
+        | call_class_method { result = val[0] }
+        | call_method { result = val[0] }
         | IDENT { result = [:ident, val[0]] }
-        | IDENT ASSIGN term { result = [:assign, val[0], val[2]]}
         | IDENT INSTANCE_OF U_IDENT
-  term  : primary_expr { result = val[0] }
-        | INTEGER MUL INTEGER
-        | INTEGER DIV INTEGER
-  return_stmt : RETURN expr { result = [:return, val[1]] }
+        | boolean
+  number : primary_expr { result = val[0] }
+         | number MUL primary_expr {}
+         | number DIV primary_expr {}
+  return_stmt : RETURN expr { result = Statement.new(type: :return, expression: val[1]) }
   primary_expr : INTEGER
                | DOUBLE { result = val[0] }
-  definement : U_IDENT IDENT SEMICOLON { result = [:define, val[1]] }
-             | U_IDENT IDENT ASSIGN expr SEMICOLON { result = [:define, val[1], val[3]]}
-  call_class_method : U_IDENT DOT IDENT L_BRACE STRING R_BRACE SEMICOLON { result = [:class_method, val[0], val[2], val[4]] }
+  variable_def : U_IDENT IDENT { result = Statement.new(type: :define, name: val[1]) }
+               | U_IDENT IDENT ASSIGN expr { result = Statement.new(type: :define, name: val[1], expression: val[3]) }
+
+  call_class_method : U_IDENT DOT IDENT L_BRACE call_arguments R_BRACE
+                      { result = Statement.new(type: :call, receiver: val[0], method_name: val[2], arguments: val[4]) }
+  call_method : expr DOT IDENT L_BRACE call_arguments R_BRACE
+                { result = Statement.new(type: :call, receiver: val[0], method_name: val[2], arguments: val[4]) }
   access_level : PUBLIC
                | PRIVATE
                | PROTECTED
   modifier : ABSTRACT
            | FINAL
            | GLOBAL
-  sharing : WITH SHARING
-          | WITHOUT SHARING
+  sharing :
+          | WITH SHARING { result = :with_sharing }
+          | WITHOUT SHARING { result = :without_sharing }
   boolean : FALSE
           | TRUE
 end
@@ -56,11 +98,3 @@ require './lib/element'
 
 ---- footer
 
-parser = ApexCompiler.new
-
-statements = parser.scan_str(STDIN.read)
-parts = statements[0][3][0][5][2]
-ApexClassTable[parts[1]].instance_methods[parts[2].to_sym].eval(parts[3])
-# statements.each do |statement|
-#   pp statement
-# end

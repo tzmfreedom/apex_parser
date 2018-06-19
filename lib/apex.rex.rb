@@ -15,6 +15,7 @@ rule
       \)               { [:R_BRACE, text] }
       '[\s\w]*'        { [:STRING, text[1..-2]] }
       @\w+             { [:ANNOTATION, text] }
+      this             { [:THIS, text] }
       insert           { [:INSERT, text] }
       delete           { [:DELETE, text] }
       undelete         { [:UNDELETE, text] }
