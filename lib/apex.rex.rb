@@ -66,6 +66,7 @@ rule
       <=               { [:LESS_THAN_EQUAL, text] }
       >=               { [:GREATER_THAN_EQUAL, text] }
       =                { [:ASSIGN, text] }
+      \:               { [:COLON, text]}
       ;                { [:SEMICOLON, text]}
       ,                { [:COMMA, text] }
       \.               { [:DOT, text] }

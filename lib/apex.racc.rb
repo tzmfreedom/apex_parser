@@ -9,7 +9,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   RETURN DOT STRING THIS REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
-  INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE
+  INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE COLON
 
 rule
   class_or_trigger : class_def { result = val[0] }
@@ -71,6 +71,8 @@ rule
         | return_stmt SEMICOLON
         | variable_def SEMICOLON
         | if_stmt
+        | for_stmt
+        | while_stmt
   if_stmt : IF L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE else_stmt_or_empty
           {
             result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
@@ -79,7 +81,12 @@ else_stmt_or_empty :
                    | else_stmts
 else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
            | ELSE stmt { result = [val[1]] }
-
+  enumurator_expr : IDENT COLON IDENT
+                  { result = ConditionNode.new(left: val[0], right: val[2]) }
+  for_stmt : FOR L_BRACE enumurator_expr R_BRACE LC_BRACE stmts RC_BRACE
+           { result = ForNode.new(condition: val[2], statements: val[5]) }
+  while_stmt : WHILE L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE
+             { result = WhileNode.new(condition: val[2], statements: val[5]) }
   assigns : assign { result = val[0] }
           | IDENT ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
   assign : IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
