@@ -1,5 +1,9 @@
 class ApexCompiler
 
+prechigh
+  right ASSIGN
+preclow
+
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   U_IDENT CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
   RETURN DOT STRING THIS REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
@@ -78,8 +82,8 @@ rule
         | IDENT INSTANCE_OF U_IDENT
         | boolean
   number : term { result = ApexIntegerNode.new(value: val[0]) }
-         | number ADD primary_expr {}
-         | number SUB primary_expr {}
+         | number ADD term {}
+         | number SUB term {}
   term   : primary_expr
          | term MUL primary_expr {}
          | term DIV primary_expr {}
@@ -87,8 +91,10 @@ rule
   primary_expr : INTEGER
                | DOUBLE
   variable_def : type IDENT { result = OperatorNode.new(type: :define, left: val[1]) }
-               | type IDENT ASSIGN expr { result = OperatorNode.new(type: :define, left: val[1], right: val[3]) }
-
+               | type IDENT ASSIGN def_assigns
+               { result = OperatorNode.new(type: :define, left: val[1], right: val[3]) }
+  def_assigns : expr
+              | IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
   call_class_method : U_IDENT DOT IDENT L_BRACE call_arguments R_BRACE
                       {
                         result = CallStaticMethodNode.new(

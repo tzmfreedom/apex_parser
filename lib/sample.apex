@@ -2,12 +2,14 @@ public class Hoge {
     public Integer a;
     public Integer b = 1;
     public static Integer action() {
-        Integer a = 3;
-        a = 5;
-        System.debug('hello world');
-        System.debug('hello hohoho');
-        System.debug('hey');
+        Integer b = 100;
+        System.debug(b);
+        Integer a = b = 20;
         System.debug(a);
+        System.debug(b);
+        a = 5;
+        System.debug(a);
+        System.debug(b);
         return null;
     }
 }
