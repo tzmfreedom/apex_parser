@@ -98,27 +98,11 @@ class InstanceVariableNode < ApexNode
   end
 end
 
+class IfNode < ApexNode
+  attr_accessor :condition, :if_stmt, :else_stmt
 
-class StatementNode < ApexNode
-  attr_accessor :type, :receiver, :name, :method_name, :arguments, :expression
-
-  def call(local_scope)
-    case type
-      when :call
-        if receiver.respond_to?(:call)
-          receiver.call(method_name, arguments, local_scope)
-        else
-          ApexClassTable[receiver].call(method_name, arguments, local_scope)
-        end
-      when :assign
-        local_scope[name.to_sym] = expression.call(local_scope)
-      when :define
-        if expression
-          local_scope[name.to_sym] = expression.call(local_scope)
-        else
-          local_scope[name.to_sym] = nil
-        end
-    end
+  def accept(visitor, local_scope)
+    visitor.visit_if(self, local_scope)
   end
 end
 
@@ -127,6 +111,18 @@ class IdentifyNode < ApexNode
 
   def accept(visitor, local_scope)
     visitor.visit_identify(self, local_scope)
+  end
+end
+
+class BooleanNode < ApexNode
+  attr_accessor :value
+
+  def initialize(value)
+    @value = value
+  end
+
+  def accept(visitor, local_scope)
+    visitor.visit_boolean(self, local_scope)
   end
 end
 
@@ -213,7 +209,6 @@ class ApexClassCreatetor
     ApexClassTable.register(@apex_class.name, @apex_class)
   end
 end
-
 
 creator = ApexClassCreatetor.new
 creator.add_class(:System, :public)

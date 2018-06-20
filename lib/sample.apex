@@ -10,6 +10,11 @@ public class Hoge {
         a = 5;
         System.debug(a);
         System.debug(b);
+        if (true) {
+            System.debug('hello!!!');
+        } else {
+            System.debug('else!!');
+        }
         return null;
     }
 }

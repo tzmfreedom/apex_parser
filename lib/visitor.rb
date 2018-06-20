@@ -20,6 +20,19 @@ class InterpreterVisitor
 
   end
 
+  def visit_if(node, local_scope)
+    condition_node = node.condition.accept(self, local_scope)
+    if condition_node.value == true
+      node.if_stmt.each do |statement|
+        statement.accept(self, local_scope)
+      end
+    else
+      node.else_stmt.each do |statement|
+        statement.accept(self, local_scope)
+      end
+    end
+  end
+
   def visit_operator(node, local_scope)
     case node.type
       when :assign
@@ -58,6 +71,10 @@ class InterpreterVisitor
         statement.accept(self, local_scope)
       end
     end
+  end
+
+  def visit_boolean(node, local_scope)
+    node
   end
 
   def visit_identify(node, local_scope)

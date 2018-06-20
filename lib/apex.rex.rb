@@ -13,8 +13,14 @@ rule
       \}               { [:RC_BRACE, text] }
       \(               { [:L_BRACE, text] }
       \)               { [:R_BRACE, text] }
-      '[\s\w]*'        { [:STRING, text[1..-2]] }
+      '[^']*'          { [:STRING, text[1..-2]] }
       @\w+             { [:ANNOTATION, text] }
+      true             { [:TRUE, text] }
+      false            { [:FALSE, text] }
+      for              { [:FOR, text] }
+      while            { [:WHILE, text] }
+      if               { [:IF, text] }
+      else             { [:ELSE, text] }
       this             { [:THIS, text] }
       insert           { [:INSERT, text] }
       delete           { [:DELETE, text] }

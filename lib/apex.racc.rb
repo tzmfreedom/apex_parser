@@ -9,7 +9,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   RETURN DOT STRING THIS REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
-  INSTANCE_OF RETURN TRUE FALSE
+  INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE
 
 rule
   class_or_trigger : class_def { result = val[0] }
@@ -64,12 +64,21 @@ rule
             | arguments COMMA argument { result = val[0].push(val[2]) }
   argument : type IDENT { result = [:argument, val[0], val[1]] }
 
-  stmts : stmt SEMICOLON { result = [val[0]] }
-        | stmts stmt SEMICOLON { result = val[0].push(val[1]) }
-  stmt  : expr { result = val[0] }
-        | assigns
-        | return_stmt
-        | variable_def
+  stmts : stmt { result = [val[0]] }
+        | stmts stmt { result = val[0].push(val[1]) }
+  stmt  : expr SEMICOLON { result = val[0] }
+        | assigns SEMICOLON
+        | return_stmt SEMICOLON
+        | variable_def SEMICOLON
+        | if_stmt
+  if_stmt : IF L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE else_stmt_or_empty
+          {
+            result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
+          }
+else_stmt_or_empty :
+                   | else_stmts
+else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
+
   assigns : assign { result = val[0] }
           | IDENT ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
   assign : IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
@@ -119,8 +128,8 @@ rule
   sharing :
           | WITH SHARING { result = :with_sharing }
           | WITHOUT SHARING { result = :without_sharing }
-  boolean : FALSE
-          | TRUE
+  boolean : TRUE { result = BooleanNode.new(true) }
+          | FALSE { result = BooleanNode.new(false) }
 end
 
 ---- header
