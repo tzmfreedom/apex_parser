@@ -1,5 +1,7 @@
 
 class ApexNode
+  attr_accessor :lineno
+
   def initialize(args = {})
     self.class.attributes.each do |attr|
       instance_variable_set("@#{attr}", args[attr])
