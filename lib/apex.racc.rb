@@ -78,6 +78,7 @@ rule
 else_stmt_or_empty :
                    | else_stmts
 else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
+           | ELSE stmt { result = [val[1]] }
 
   assigns : assign { result = val[0] }
           | IDENT ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }

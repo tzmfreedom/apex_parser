@@ -27,6 +27,7 @@ class InterpreterVisitor
         statement.accept(self, local_scope)
       end
     else
+      return unless node.else_stmt
       node.else_stmt.each do |statement|
         statement.accept(self, local_scope)
       end

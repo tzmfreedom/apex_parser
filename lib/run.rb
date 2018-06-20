@@ -1,6 +1,5 @@
 require './lib/apex'
 require './lib/statement'
-require './lib/node'
 require './lib/visitor'
 
 parser = ApexCompiler.new
