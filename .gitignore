@@ -11,3 +11,6 @@
 .rspec_status
 /vendor/bundle
 /.idea
+lib/apex.l.rb
+lib/apex.rb
+Gemfile.lock
