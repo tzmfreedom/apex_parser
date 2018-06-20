@@ -1,3 +1,4 @@
+
 class ApexNode
   def initialize(args = {})
     self.class.attributes.each do |attr|
@@ -20,11 +21,15 @@ class ApexNode
 end
 
 class ApexClassNode < ApexNode
-  attr_accessor :access_level, :name, :statements, :apex_instance_variables, :apex_instance_methods
+  attr_accessor :access_level, :name, :statements,
+                :apex_instance_variables, :apex_instance_methods,
+                :apex_static_variables, :apex_static_methods
 
   def initialize(args = {})
     super
     @apex_instance_methods = {}
+    @apex_static_methods = {}
+    @apex_static_variables = {}
     @apex_instance_variables = {}
 
     statements.each do |statement|
@@ -32,33 +37,52 @@ class ApexClassNode < ApexNode
     end
   end
 
-  def call(method_name, arguments, local_scope)
-    # argumentsをlocal_scopeで評価
-    evaluated_arguments = arguments.map { |argument|
-      argument.call(local_scope)
-    }
-    apex_instance_methods[method_name.to_sym].call(evaluated_arguments)
+  def accept(visitor)
+    visitor.visit_class(self)
   end
 end
 
-class ApexMethodNode < ApexNode
-  attr_accessor :name, :access_level, :return_type, :arguments, :statements
+class ApexStaticMethodNode < ApexNode
+  attr_accessor :name, :access_level, :return_type,
+                :arguments, :statements, :apex_class_name
+
+  def native?
+    false
+  end
 
   def add_to_class(klass)
+    self.apex_class_name = klass.name
+    klass.apex_static_methods[name.to_sym] = self
+  end
+
+  def accept(visitor)
+    visitor.visit_class_method(self)
+  end
+end
+
+class ApexInstanceMethodNode < ApexNode
+  attr_accessor :name, :access_level, :return_type,
+                :arguments, :statements, :apex_class_name
+
+  def add_to_class(klass)
+    self.apex_class_name = klass.name
     klass.apex_instance_methods[name.to_sym] = self
   end
 
-  def call(arguments, local_scope = {})
-    local_scope[:arg1] = arguments[0]
-    execute(local_scope)
+  def accept(visitor)
+    visitor.visit_method(self)
+  end
+end
+
+class ApexStaticVariableNode < ApexNode
+  attr_accessor :type, :name, :access_level, :expression
+
+  def add_to_class(klass)
+    klass.apex_static_variables[name.to_sym] = self
   end
 
-  private
-
-  def execute(local_scope)
-    statements.each do |statement|
-      statement.call(local_scope)
-    end
+  def accept(visitor)
+    visitor.visit_static_variable(self)
   end
 end
 
@@ -68,7 +92,12 @@ class InstanceVariableNode < ApexNode
   def add_to_class(klass)
     klass.apex_instance_variables[name.to_sym] = self
   end
+
+  def accept(visitor)
+    visitor.visit_instance_variable(self)
+  end
 end
+
 
 class StatementNode < ApexNode
   attr_accessor :type, :receiver, :name, :method_name, :arguments, :expression
@@ -96,41 +125,45 @@ end
 class IdentifyNode < ApexNode
   attr_accessor :name
 
-  def call(local_scope)
-    local_scope[name.to_sym]
+  def accept(visitor, local_scope)
+    visitor.visit_identify(self, local_scope)
   end
 end
 
 class ApexStringNode < ApexNode
   attr_accessor :value
 
-  def call(_)
-    value
+  def accept(visitor, local_scope)
+    visitor.visit_string(self, local_scope)
   end
 end
 
 class ApexObjectNode < ApexNode
   attr_accessor :apex_class, :instance_variables
+
+  def accept(visitor, local_scope)
+    visitor.visit_object(self, local_scope)
+  end
 end
 
 class ApexIntegerNode < ApexNode
   attr_accessor :value
 
-  def call(_)
-    value
+  def accept(visitor, local_scope)
+    visitor.visit_integer(self, local_scope)
   end
 end
 
 class ApexDoubleNode < ApexNode
   attr_accessor :value
 
-  def eval
-    value
+  def accept(visitor, local_scope)
+    visitor.visit_double(self, local_scope)
   end
 end
 
 
-class LocalScope
+class Environment
   attr_accessor :variables
 end
 
@@ -157,14 +190,18 @@ class ApexClassCreatetor
   end
 
   def add_method(name, access_level, return_type, &block)
-    method = ApexMethodNode.new(
+    method = ApexStaticMethodNode.new(
       name: name,
       access_level: access_level,
       return_type: return_type,
       arguments: [],
     )
     method.instance_eval do
-      define_singleton_method(:execute) do |local_scope|
+      define_singleton_method(:native?) do
+        true
+      end
+
+      define_singleton_method(:call) do |local_scope|
         block.call(local_scope)
       end
     end
@@ -181,6 +218,6 @@ end
 creator = ApexClassCreatetor.new
 creator.add_class(:System, :public)
 creator.add_method(:debug, :public, :String) do |local_scope|
-  puts local_scope[:arg1]
+  puts local_scope[:arg1].value
 end
 creator.register

@@ -1,5 +1,7 @@
 public class Hoge {
-    public PageReference action() {
+    public Integer a;
+    public Integer b = 1;
+    public static Integer action() {
         Integer a = 3;
         a = 5;
         System.debug('hello world');

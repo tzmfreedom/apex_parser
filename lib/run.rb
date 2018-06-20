@@ -1,11 +1,17 @@
 require './lib/apex'
+require './lib/statement'
+require './lib/node'
+require './lib/visitor'
 
 parser = ApexCompiler.new
 
-class_def = parser.scan_str(STDIN.read)
-ApexClassTable.register(class_def.name, class_def)
-class_def.call(:action, [], {})
+interpreter = InterpreterVisitor.new
+class_node = parser.scan_str(STDIN.read)
+class_node.accept(interpreter)
 
-# statements.each do |statement|
-#   pp statement
-# end
+call_class_method_node = CallStaticMethodNode.new(
+  apex_class_name: class_node.name,
+  arguments: [],
+  apex_method_name: :action
+)
+call_class_method_node.accept(interpreter, {})

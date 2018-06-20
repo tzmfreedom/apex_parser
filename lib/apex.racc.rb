@@ -11,11 +11,11 @@ rule
   class_or_trigger : class_def { result = val[0] }
                    | trigger_def { result = val[0] }
   type : U_IDENT
-  trigger_def : TRIGGER U_IDENT ON U_IDENT L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
+  trigger_def : TRIGGER U_IDENT ON type L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
               {
                 result = [:trigger, val[1], val[3], val[7]]
               }
-  class_def : access_level CLASS sharing U_IDENT LC_BRACE class_stmts RC_BRACE
+  class_def : access_level CLASS sharing type LC_BRACE class_stmts RC_BRACE
             {
               result = ApexClassNode.new(
                 access_level: val[0],
@@ -24,39 +24,51 @@ rule
                 statements: val[5]
               )
             }
-  instance_variable_def : access_level type IDENT SEMICOLON { result = InstanceVaribleNode.new(access_level: val[0], type: val[1], name: val[2]) }
-                        | access_level type IDENT ASSIGN expr SEMICOLON
-                          { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: val[2], expression: val[4]) }
   class_stmts : class_stmt { result = [val[0]] }
               | class_stmts class_stmt { result = val[0].push(val[1]) }
-  class_stmt : method_def { result = val[0] }
-             | instance_variable_def { result = val[0] }
-  method_def : PUBLIC U_IDENT IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-               {
-                 result = ApexMethodNode.new(
-                   access_level: val[0],
-                   return_type: val[1],
-                   name: val[2],
-                   arguments: val[4],
-                   statements: val[7]
-                 )
-               }
+  class_stmt : instance_method_def { result = val[0] }
+             | static_method_def
+             | instance_variable_def SEMICOLON { result = val[0] }
+
+  instance_variable_def : access_level modifier type IDENT { result = InstanceVariableNode.new(access_level: val[0], type: val[2], name: val[3]) }
+                        | access_level modifier type IDENT ASSIGN expr
+                        { result = InstanceVariableNode.new(access_level: val[0], type: val[2], name: val[3], expression: val[5]) }
+
+  instance_method_def : access_level modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                      {
+                        result = ApexInstanceMethodNode.new(
+                          access_level: val[0],
+                          return_type: val[2],
+                          name: val[3],
+                          arguments: val[5],
+                          statements: val[8]
+                        )
+                      }
+  static_method_def : access_level STATIC modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                    {
+                      result = ApexStaticMethodNode.new(
+                        access_level: val[0],
+                        return_type: val[3],
+                        name: val[4],
+                        arguments: val[6],
+                        statements: val[9]
+                      )
+                    }
   empty_or_arguments :
                      | arguments
   arguments : argument { result = [val[0]] }
-            | arguments COMMA argument { result = val[0].push(val[1]) }
-  argument : U_IDENT IDENT { result = [:argument, val[0], val[1]] }
+            | arguments COMMA argument { result = val[0].push(val[2]) }
+  argument : type IDENT { result = [:argument, val[0], val[1]] }
 
-  call_arguments : call_argument { result = [val[0]] }
-                 | call_arguments COMMA call_argument { result = val[0].push(val[1]) }
-  call_argument : expr { result = val[0] }
-
-  stmts : stmt { result = [val[0]] }
-        | stmts stmt { result = val[0].push(val[1]) }
-  stmt  : expr SEMICOLON { result = val[0] }
-        | return_stmt SEMICOLON
-        | variable_def SEMICOLON
-        | IDENT ASSIGN expr SEMICOLON { result = StatementNode.new(type: :assign, name: val[0], expression: val[2]) }
+  stmts : stmt SEMICOLON { result = [val[0]] }
+        | stmts stmt SEMICOLON { result = val[0].push(val[1]) }
+  stmt  : expr { result = val[0] }
+        | assigns
+        | return_stmt
+        | variable_def
+  assigns : assign { result = val[0] }
+          | IDENT ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+  assign : IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
 
   expr  : number { result = val[0] }
         | STRING { result = ApexStringNode.new(value: val[0]) }
@@ -65,23 +77,37 @@ rule
         | IDENT { result = IdentifyNode.new(name: val[0]) }
         | IDENT INSTANCE_OF U_IDENT
         | boolean
-  number : primary_expr { result = ApexIntegerNode.new(value: val[0]) }
-         | number MUL primary_expr {}
-         | number DIV primary_expr {}
-  return_stmt : RETURN expr { result = StatementNode.new(type: :return, expression: val[1]) }
+  number : term { result = ApexIntegerNode.new(value: val[0]) }
+         | number ADD primary_expr {}
+         | number SUB primary_expr {}
+  term   : primary_expr
+         | term MUL primary_expr {}
+         | term DIV primary_expr {}
+  return_stmt : RETURN expr { result = OperatorNode.new(type: :return, left: val[1]) }
   primary_expr : INTEGER
                | DOUBLE
-  variable_def : U_IDENT IDENT { result = StatementNode.new(type: :define, name: val[1]) }
-               | U_IDENT IDENT ASSIGN expr { result = StatementNode.new(type: :define, name: val[1], expression: val[3]) }
+  variable_def : type IDENT { result = OperatorNode.new(type: :define, left: val[1]) }
+               | type IDENT ASSIGN expr { result = OperatorNode.new(type: :define, left: val[1], right: val[3]) }
 
   call_class_method : U_IDENT DOT IDENT L_BRACE call_arguments R_BRACE
-                      { result = StatementNode.new(type: :call, receiver: val[0], method_name: val[2], arguments: val[4]) }
+                      {
+                        result = CallStaticMethodNode.new(
+                          apex_class_name: val[0],
+                          apex_method_name: val[2],
+                          arguments: val[4]
+                        )
+                      }
   call_method : expr DOT IDENT L_BRACE call_arguments R_BRACE
-                { result = StatementNode.new(type: :call, receiver: val[0], method_name: val[2], arguments: val[4]) }
+                { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], method_name: val[2], arguments: val[4]) }
+  call_arguments : call_argument { result = [val[0]] }
+                 | call_arguments COMMA call_argument { result = val[0].push(val[2]) }
+  call_argument : expr { result = val[0] }
+
   access_level : PUBLIC
                | PRIVATE
                | PROTECTED
-  modifier : ABSTRACT
+  modifier :
+           | ABSTRACT
            | FINAL
            | GLOBAL
   sharing :
