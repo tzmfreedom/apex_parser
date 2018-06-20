@@ -1,4 +1,4 @@
-class ApexModel
+class ApexNode
   def initialize(args = {})
     self.class.attributes.each do |attr|
       instance_variable_set("@#{attr}", args[attr])
@@ -19,7 +19,7 @@ class ApexModel
   end
 end
 
-class ApexClass < ApexModel
+class ApexClassNode < ApexNode
   attr_accessor :access_level, :name, :statements, :apex_instance_variables, :apex_instance_methods
 
   def initialize(args = {})
@@ -41,8 +41,7 @@ class ApexClass < ApexModel
   end
 end
 
-# LocalScope
-class ApexMethod < ApexModel
+class ApexMethodNode < ApexNode
   attr_accessor :name, :access_level, :return_type, :arguments, :statements
 
   def add_to_class(klass)
@@ -51,13 +50,19 @@ class ApexMethod < ApexModel
 
   def call(arguments, local_scope = {})
     local_scope[:arg1] = arguments[0]
+    execute(local_scope)
+  end
+
+  private
+
+  def execute(local_scope)
     statements.each do |statement|
       statement.call(local_scope)
     end
   end
 end
 
-class InstanceVariable < ApexModel
+class InstanceVariableNode < ApexNode
   attr_accessor :type, :name, :access_level, :expression
 
   def add_to_class(klass)
@@ -65,7 +70,7 @@ class InstanceVariable < ApexModel
   end
 end
 
-class Statement < ApexModel
+class StatementNode < ApexNode
   attr_accessor :type, :receiver, :name, :method_name, :arguments, :expression
 
   def call(local_scope)
@@ -88,7 +93,7 @@ class Statement < ApexModel
   end
 end
 
-class Identify < ApexModel
+class IdentifyNode < ApexNode
   attr_accessor :name
 
   def call(local_scope)
@@ -96,7 +101,7 @@ class Identify < ApexModel
   end
 end
 
-class ApexString < ApexModel
+class ApexStringNode < ApexNode
   attr_accessor :value
 
   def call(_)
@@ -104,11 +109,11 @@ class ApexString < ApexModel
   end
 end
 
-class ApexObject < ApexModel
+class ApexObjectNode < ApexNode
   attr_accessor :apex_class, :instance_variables
 end
 
-class ApexInteger < ApexModel
+class ApexIntegerNode < ApexNode
   attr_accessor :value
 
   def call(_)
@@ -116,7 +121,7 @@ class ApexInteger < ApexModel
   end
 end
 
-class ApexDouble < ApexModel
+class ApexDoubleNode < ApexNode
   attr_accessor :value
 
   def eval
@@ -143,18 +148,39 @@ class ApexClassTable
   end
 end
 
-method_statements = [
-  -> (local_scope) { puts local_scope[:arg1] }
-]
+class ApexClassCreatetor
+  attr_accessor :apex_class_name, :apex_class_access_level, :apex_methods
 
-statements = [
-  ApexMethod.new(
-    name: 'debug',
-    access_level: :public,
-    return_type: :void,
-    arguments: [],
-    statements: method_statements
-  )
-]
-system = ApexClass.new(access_level: :public, name: 'System', statements: statements)
-ApexClassTable.register(:System, system)
+  def add_class(name, access_level)
+    @apex_class_name = name
+    @apex_class_access_level = access_level
+  end
+
+  def add_method(name, access_level, return_type, &block)
+    method = ApexMethodNode.new(
+      name: name,
+      access_level: access_level,
+      return_type: return_type,
+      arguments: [],
+    )
+    method.instance_eval do
+      define_singleton_method(:execute) do |local_scope|
+        block.call(local_scope)
+      end
+    end
+    (@apex_methods ||= []) << method
+  end
+
+  def register
+    @apex_class = ApexClassNode.new(access_level: @apex_class_access_level, name: @apex_class_name, statements: @apex_methods)
+    ApexClassTable.register(@apex_class.name, @apex_class)
+  end
+end
+
+
+creator = ApexClassCreatetor.new
+creator.add_class(:System, :public)
+creator.add_method(:debug, :public, :String) do |local_scope|
+  puts local_scope[:arg1]
+end
+creator.register
