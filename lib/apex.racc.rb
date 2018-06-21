@@ -12,8 +12,8 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE COLON
 
 rule
-  class_or_trigger : class_def { result = val[0] }
-                   | trigger_def { result = val[0] }
+  class_or_trigger : class_def
+                   | trigger_def
   type : U_IDENT { result = value(val, 0) }
   trigger_def : TRIGGER U_IDENT ON type L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
               {
@@ -30,14 +30,24 @@ rule
             }
   class_stmts : class_stmt { result = [val[0]] }
               | class_stmts class_stmt { result = val[0].push(val[1]) }
-  class_stmt : instance_method_def { result = val[0] }
+  class_stmt : instance_method_def
              | static_method_def
-             | instance_variable_def SEMICOLON { result = val[0] }
+             | constructor_def
+             | instance_variable_def SEMICOLON
 
   instance_variable_def : access_level type IDENT { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2)) }
                         | access_level type IDENT ASSIGN expr
                         { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2), expression: val[4]) }
-
+  constructor_def : access_level U_IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                  {
+                    result = ApexInstanceMethodNode.new(
+                      access_level: val[0],
+                      return_type: :void,
+                      name: value(val, 1),
+                      arguments: val[3],
+                      statements: val[6]
+                    )
+                  }
   instance_method_def : access_level modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                       {
                         result = ApexInstanceMethodNode.new(
@@ -86,7 +96,7 @@ rule
 
   stmts : stmt { result = [val[0]] }
         | stmts stmt { result = val[0].push(val[1]) }
-  stmt  : expr SEMICOLON { result = val[0] }
+  stmt  : expr SEMICOLON
         | assigns SEMICOLON
         | return_stmt SEMICOLON
         | variable_def SEMICOLON
@@ -107,23 +117,23 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
            { result = ForNode.new(condition: val[2], statements: val[5]) }
   while_stmt : WHILE L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE
              { result = WhileNode.new(condition: val[2], statements: val[5]) }
-  assigns : assign { result = val[0] }
+  assigns : assign
           | variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
   assign : variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
   variable : IDENT
            | instance_variable
-expr  : number { result = val[0] }
+expr  : number
         | new_expr
         | STRING { result = ApexStringNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
-        | call_class_method { result = val[0] }
-        | call_method { result = val[0] }
+        | call_class_method
+        | call_method
         | IDENT { result = IdentifyNode.new(name: value(val, 0)) }
         | IDENT INSTANCE_OF U_IDENT
         | boolean
         | instance_variable
-new_expr : NEW U_IDENT L_BRACE arguments R_BRACE
+new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
          {
-           result = NewNode.new(apex_class_name: value(val, 1), arguments: value(val, 3))
+           result = NewNode.new(apex_class_name: value(val, 1), arguments: val[3] && value(val, 3))
          }
   number : term
          | number ADD term {}
@@ -152,7 +162,7 @@ instance_variable : expr DOT IDENT
                 { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], method_name: value(val, 2), arguments: val[4]) }
   call_arguments : call_argument { result = [val[0]] }
                  | call_arguments COMMA call_argument { result = val[0].push(val[2]) }
-  call_argument : expr { result = val[0] }
+  call_argument : expr
 
   access_level : PUBLIC
                | PRIVATE

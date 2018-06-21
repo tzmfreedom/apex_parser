@@ -5,11 +5,9 @@ class InterpreterVisitor
     ApexClassTable.register(node.name, node)
   end
 
-  def visit_method(node, arguments)
-    local_scope = {}
-    local_scope[:arg1] = arguments[0]
+  def visit_method(node, local_scope)
     node.statements.each do |statement|
-      statement.call(local_scope)
+      statement.accept(self, local_scope)
     end
   end
 
@@ -74,7 +72,8 @@ class InterpreterVisitor
   def visit_new(node, local_scope)
     apex_class_node = ApexClassTable[node.apex_class_name.to_sym]
     object_node = ApexObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
-    instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name]
+    instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name.to_sym]
+    return unless instance_method_node
     # expand node.arguments from local_scope
     evaluated_arguments = node.arguments.map { |argument|
       argument.accept(self, local_scope)
@@ -83,6 +82,7 @@ class InterpreterVisitor
     local_scope[:arg1] = evaluated_arguments[0]
     local_scope[:this] = object_node
     instance_method_node.accept(self, local_scope)
+    object_node
   end
 
   def visit_boolean(node, local_scope)

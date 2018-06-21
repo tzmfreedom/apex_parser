@@ -7,6 +7,8 @@ public class Hoge {
         Integer a = b = 20;
         System.debug(a);
         System.debug(b);
+        Hoge a = new Hoge();
+        System.debug(a);
         a = 5;
         System.debug(a);
         System.debug(b);
@@ -18,5 +20,9 @@ public class Hoge {
             System.debug('falseaaaa');
         }
         return null;
+    }
+
+    public Hoge() {
+        System.debug('constructor');
     }
 }

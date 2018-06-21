@@ -71,8 +71,8 @@ class ApexInstanceMethodNode < ApexNode
     klass.apex_instance_methods[name.to_sym] = self
   end
 
-  def accept(visitor)
-    visitor.visit_method(self)
+  def accept(visitor, local_scope)
+    visitor.visit_method(self, local_scope)
   end
 end
 
@@ -142,6 +142,10 @@ class ApexObjectNode < ApexNode
   def accept(visitor, local_scope)
     visitor.visit_object(self, local_scope)
   end
+
+  def value
+    "#<#{apex_class_node.name}:#{object_id}>"
+  end
 end
 
 class ApexIntegerNode < ApexNode
@@ -162,6 +166,12 @@ end
 
 class NewNode < ApexNode
   attr_accessor :apex_class_name, :arguments
+
+  def initialize(*args)
+    super
+
+    @arguments ||= []
+  end
 
   def accept(visitor, local_scope)
     visitor.visit_new(self, local_scope)
