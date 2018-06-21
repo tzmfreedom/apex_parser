@@ -4,7 +4,7 @@ class ApexNode
 
   def initialize(args = {})
     self.class.attributes.each do |attr|
-      instance_variable_set("@#{attr}", args[attr])
+      public_send("#{attr}=", args[attr])
     end
   end
 
@@ -133,6 +133,22 @@ class ArgumentNode < ApexNode
       else
         ApexObjectNode
       end
+  end
+end
+
+class ForNode < ApexNode
+  attr_accessor :init_stmt, :exit_condition, :increment_stmt, :statements
+
+  def accept(visitor, local_scope)
+    visitor.visit_for(self, local_scope)
+  end
+end
+
+class ForEnumNode < ApexNode
+  attr_accessor :type, :ident, :list, :statements
+
+  def accept(visitor, local_scope)
+    visitor.visit_forenum(self, local_scope)
   end
 end
 

@@ -29,7 +29,7 @@ class InterpreterVisitor
   end
 
   def visit_operator(node, local_scope)
-    case node.type
+    case node.type.to_sym
       when :assign
         local_scope[node.left.to_sym] = node.right.accept(self, local_scope)
       when :define
@@ -42,6 +42,16 @@ class InterpreterVisitor
         else
           local_scope[node.left.to_sym] = NULL
         end
+      when :<
+        BooleanNode.new(node.left.accept(self, local_scope).value < node.right.accept(self, local_scope).value)
+      when :>
+        BooleanNode.new(node.left.accept(self, local_scope).value > node.right.accept(self, local_scope).value)
+      when :plus_plus
+        value = local_scope[node.left.to_sym].value
+        local_scope[node.left.to_sym] = ApexIntegerNode.new(value: value + 1)
+      when :minus_minus
+        value = local_scope[node.left.to_sym].value
+        local_scope[node.left.to_sym] = ApexIntegerNode.new(value: value - 1)
     end
   end
 
@@ -58,6 +68,45 @@ class InterpreterVisitor
     else
       method.statements.each do |statement|
         statement.accept(self, local_scope)
+      end
+    end
+  end
+
+  def visit_for(node, local_scope)
+    new_local_scope = local_scope.dup
+    node.init_stmt.accept(self, new_local_scope)
+
+    loop do
+      break if node.exit_condition.accept(self, new_local_scope).value == false
+      node.statements.each do |statement|
+        statement.accept(self, new_local_scope)
+      end
+      node.increment_stmt.accept(self, new_local_scope)
+    end
+  end
+
+  def visit_forenum(node, local_scope)
+    new_local_scope = local_scope.dup
+    next_method= node.list.apex_class_node.apex_instance_methods[:next]
+    has_next_method= node.list.apex_class_node.apex_instance_methods[:has_next]
+
+    loop do
+      has_next_return = nil
+      has_next_local_scope = { this: list }
+      has_next_method.statements.each do |statement|
+        has_next_return = statement.accept(self, has_next_local_scope)
+      end
+
+      break if has_next_return.value == false
+
+      next_return = nil
+      next_method.statements.each do |statement|
+        next_return = statement.accept(self, new_local_scope)
+      end
+
+      new_local_scope[node.ident.to_sym] = next_return
+      node.statements.each do |statement|
+        statement.accept(self, new_local_scope)
       end
     end
   end

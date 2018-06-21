@@ -10,6 +10,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
   INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE COLON
+  LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
 
 rule
   class_or_trigger : class_def
@@ -100,9 +101,14 @@ rule
         | assigns SEMICOLON
         | return_stmt SEMICOLON
         | variable_def SEMICOLON
+        | boolean_stmt SEMICOLON
         | if_stmt
         | for_stmt
         | while_stmt
+  loop_stmt  : expr
+             | assigns
+             | variable_def
+             | boolean_stmt
   if_stmt : IF L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE else_stmt_or_empty
           {
             result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
@@ -111,10 +117,12 @@ else_stmt_or_empty :
                    | else_stmts
 else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
            | ELSE stmt { result = [val[1]] }
-  enumurator_expr : IDENT COLON IDENT
-                  { result = ConditionNode.new(left: value(val, 0), right: value(val, 2)) }
-  for_stmt : FOR L_BRACE enumurator_expr R_BRACE LC_BRACE stmts RC_BRACE
-           { result = ForNode.new(condition: val[2], statements: val[5]) }
+  for_stmt : FOR L_BRACE empty_or_loop_stmt SEMICOLON empty_or_loop_stmt SEMICOLON empty_or_loop_stmt R_BRACE LC_BRACE stmts RC_BRACE
+           { result = ForNode.new(init_stmt: val[2], exit_condition: val[4], increment_stmt: val[6], statements: val[9]) }
+           | FOR L_BRACE type IDENT COLON IDENT R_BRACE LC_BRACE stmts RC_BRACE
+           { result = ForEnumNode.new(type: val[2], ident: value(val, 3), list: value(val, 5), statements: val[8]) }
+  empty_or_loop_stmt :
+                     | loop_stmt
   while_stmt : WHILE L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE
              { result = WhileNode.new(condition: val[2], statements: val[5]) }
   assigns : assign
@@ -122,7 +130,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
   assign : variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
   variable : IDENT
            | instance_variable
-expr  : number
+  expr  : number
         | new_expr
         | STRING { result = ApexStringNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
         | call_class_method
@@ -131,6 +139,8 @@ expr  : number
         | IDENT INSTANCE_OF U_IDENT
         | boolean
         | instance_variable
+        | unary_operator IDENT { result = OperatorNode.new(type: val[0], left: value(val, 1))}
+        | IDENT unary_operator { result = OperatorNode.new(type: val[1], left: value(val, 0))}
 new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
          {
            result = NewNode.new(apex_class_name: value(val, 1), arguments: val[3] && value(val, 3))
@@ -149,10 +159,10 @@ new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
                { result = OperatorNode.new(type: :define, left: value(val, 1), right: val[3]) }
   def_assigns : expr
               | IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-  call_class_method : U_IDENT DOT IDENT L_BRACE call_arguments R_BRACE
+  call_class_method : type DOT IDENT L_BRACE call_arguments R_BRACE
                       {
                         result = CallStaticMethodNode.new(
-                          apex_class_name: value(val, 0),
+                          apex_class_name: val[0],
                           apex_method_name: value(val, 2),
                           arguments: val[4]
                         )
@@ -177,6 +187,15 @@ instance_variable : expr DOT IDENT
           | WITHOUT SHARING { result = :without_sharing }
   boolean : TRUE { result = BooleanNode.new(true) }
           | FALSE { result = BooleanNode.new(false) }
+  boolean_stmt : expr comparator expr { result = OperatorNode.new(type: value(val, 1), left: val[0], right: val[2])}
+  comparator : LESS_THAN
+             | LESS_THAN_EQUAL
+             | GREATER_THAN
+             | GREATER_THAN_EQUAL
+             | NOT_EQUAL
+             | EQUAL
+  unary_operator: ADD ADD { result = :plus_plus }
+                | SUB SUB { resutl = :minus_minus }
 end
 
 ---- header

@@ -20,6 +20,9 @@ public class Hoge {
         } else if (true) {
             System.debug('falseaaaa');
         }
+        for (Integer i = 0; i < 10; i++) {
+            System.debug(i);
+        }
         return null;
     }
 
