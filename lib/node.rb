@@ -241,17 +241,21 @@ class AnyObject; end
 class ApexClassCreatetor
   attr_accessor :apex_class_name, :apex_class_access_level, :apex_methods
 
+  def initialize
+    yield(self)
+  end
+
   def add_class(name, access_level)
     @apex_class_name = name
     @apex_class_access_level = access_level
   end
 
-  def add_method(name, access_level, return_type, &block)
+  def add_method(name, access_level, return_type, arguments, &block)
     method = ApexStaticMethodNode.new(
       name: name,
       access_level: access_level,
       return_type: return_type,
-      arguments: [ArgumentNode.new(type: :Object, name: :object)],
+      arguments: arguments.map { |argument| ArgumentNode.new(type: argument[0], name: argument[1]) },
     )
     method.instance_eval do
       define_singleton_method(:native?) do
@@ -271,9 +275,10 @@ class ApexClassCreatetor
   end
 end
 
-creator = ApexClassCreatetor.new
-creator.add_class(:System, :public)
-creator.add_method(:debug, :public, :String) do |local_scope|
-  puts local_scope[:object].value
+ApexClassCreatetor.new do |c|
+  c.add_class(:System, :public)
+  c.add_method(:debug, :public, :String, [[:Object, :object]]) do |local_scope|
+    puts local_scope[:object].value
+  end
+  c.register
 end
-creator.register
