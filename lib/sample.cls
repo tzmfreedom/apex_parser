@@ -12,6 +12,7 @@ public class Hoge {
         System.debug(a);
         a = 5;
         System.debug(a);
+        [aaaa];
         System.debug(b);
         if (true) {
             System.debug('hello!!!');

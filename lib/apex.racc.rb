@@ -11,6 +11,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
   INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE COLON
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
+  SOQL SOQL_IN SOQL_OUT
 
 rule
   class_or_trigger : class_def
@@ -141,6 +142,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
         | instance_variable
         | unary_operator IDENT { result = OperatorNode.new(type: val[0], left: value(val, 1))}
         | IDENT unary_operator { result = OperatorNode.new(type: val[1], left: value(val, 0))}
+        | SOQL_IN SOQL SOQL_OUT
 new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
          {
            result = NewNode.new(apex_class_name: value(val, 1), arguments: val[3] && value(val, 3))
