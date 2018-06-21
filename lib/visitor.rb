@@ -52,14 +52,11 @@ class InterpreterVisitor
 
   def visit_call_static_method(node, local_scope)
     class_node = ApexClassTable[node.apex_class_name]
-    # argumentsをlocal_scopeで評価
-    evaluated_arguments = node.arguments.map { |argument|
-      argument.accept(self, local_scope)
-    }
     method = class_node.apex_static_methods[node.apex_method_name.to_sym]
 
-    local_scope = {}
-    local_scope[:arg1] = evaluated_arguments[0]
+    local_scope = check_argument(method, node.arguments, local_scope)
+    return unless local_scope
+
     if method.native?
       method.call(local_scope)
     else
@@ -69,19 +66,42 @@ class InterpreterVisitor
     end
   end
 
+  def check_argument(method, arguments, local_scope)
+    evaluated_arguments = arguments.map { |argument|
+      argument.accept(self, local_scope)
+    }
+    # Check Argument
+    if evaluated_arguments.size !=  method.arguments.size
+      # TODO: Error Handling
+      puts "Error!!"
+      return
+    end
+
+    new_local_scope = {}
+    evaluated_arguments.each_with_index do |evaluated_argument, idx|
+      if method.arguments[idx].type != AnyObject && evaluated_argument.class != method.arguments[idx].type
+        # TODO: Error Handling
+        puts "Error!!"
+        return
+      end
+      variable_name = method.arguments[idx].name.to_sym
+      new_local_scope[variable_name] = evaluated_argument
+    end
+    new_local_scope
+  end
+
   def visit_new(node, local_scope)
     apex_class_node = ApexClassTable[node.apex_class_name.to_sym]
     object_node = ApexObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
     instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name.to_sym]
     return unless instance_method_node
-    # expand node.arguments from local_scope
-    evaluated_arguments = node.arguments.map { |argument|
-      argument.accept(self, local_scope)
-    }
-    local_scope = {}
-    local_scope[:arg1] = evaluated_arguments[0]
-    local_scope[:this] = object_node
-    instance_method_node.accept(self, local_scope)
+
+    new_local_scope = check_argument(instance_method_node, node.arguments, local_scope)
+    return unless new_local_scope
+
+    new_local_scope = {}
+    new_local_scope[:this] = object_node
+    instance_method_node.accept(self, new_local_scope)
     object_node
   end
 

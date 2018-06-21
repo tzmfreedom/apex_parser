@@ -108,6 +108,30 @@ class IfNode < ApexNode
   end
 end
 
+class ArgumentNode < ApexNode
+  attr_accessor :type, :name
+
+  def initialize(*args)
+    super
+
+    self.type =
+      case type
+      when :Integer
+        ApexIntegerNode
+      when :Double
+        ApexDoubleNode
+      when :Boolean
+        ApexBooleanNode
+      when :String
+        ApexStringNode
+      when :Object
+        AnyObject
+      else
+        ApexObjectNode
+      end
+  end
+end
+
 class IdentifyNode < ApexNode
   attr_accessor :name
 
@@ -192,6 +216,8 @@ class ApexClassTable
   end
 end
 
+class AnyObject; end
+
 class ApexClassCreatetor
   attr_accessor :apex_class_name, :apex_class_access_level, :apex_methods
 
@@ -205,7 +231,7 @@ class ApexClassCreatetor
       name: name,
       access_level: access_level,
       return_type: return_type,
-      arguments: [],
+      arguments: [ArgumentNode.new(type: :Object, name: :object)],
     )
     method.instance_eval do
       define_singleton_method(:native?) do
@@ -228,6 +254,6 @@ end
 creator = ApexClassCreatetor.new
 creator.add_class(:System, :public)
 creator.add_method(:debug, :public, :String) do |local_scope|
-  puts local_scope[:arg1].value
+  puts local_scope[:object].value
 end
 creator.register

@@ -44,7 +44,7 @@ rule
                       access_level: val[0],
                       return_type: :void,
                       name: value(val, 1),
-                      arguments: val[3],
+                      arguments: val[3] || [],
                       statements: val[6]
                     )
                   }
@@ -54,7 +54,7 @@ rule
                           access_level: val[0],
                           return_type: val[2],
                           name: value(val, 3),
-                          arguments: val[5],
+                          arguments: val[5] || [],
                           statements: val[8]
                         )
                       }
@@ -64,7 +64,7 @@ rule
                           access_level: val[0],
                           return_type: val[1],
                           name: value(val, 2),
-                          arguments: val[4],
+                          arguments: val[4] || [],
                           statements: val[7]
                         )
                       }
@@ -74,7 +74,7 @@ rule
                         access_level: val[0],
                         return_type: val[3],
                         name: value(val, 4),
-                        arguments: val[6],
+                        arguments: val[6] || [],
                         statements: val[9]
                       )
                     }
@@ -84,7 +84,7 @@ rule
                         access_level: val[0],
                         return_type: val[2],
                         name: value(val, 3),
-                        arguments: val[5],
+                        arguments: val[5] || [],
                         statements: val[8]
                       )
                     }
@@ -92,7 +92,7 @@ rule
                      | arguments
   arguments : argument { result = [val[0]] }
             | arguments COMMA argument { result = val[0].push(val[2]) }
-  argument : type IDENT { result = [:argument, val[0], val[1]] }
+  argument : type IDENT { result = ArgumentNode.new(type: val[0], name: val[1]) }
 
   stmts : stmt { result = [val[0]] }
         | stmts stmt { result = val[0].push(val[1]) }
