@@ -34,9 +34,9 @@ rule
              | static_method_def
              | instance_variable_def SEMICOLON { result = val[0] }
 
-  instance_variable_def : access_level modifier type IDENT { result = InstanceVariableNode.new(access_level: val[0], type: val[2], name: value(val, 3)) }
-                        | access_level modifier type IDENT ASSIGN expr
-                        { result = InstanceVariableNode.new(access_level: val[0], type: val[2], name: value(val, 3), expression: val[5]) }
+  instance_variable_def : access_level type IDENT { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2)) }
+                        | access_level type IDENT ASSIGN expr
+                        { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2), expression: val[4]) }
 
   instance_method_def : access_level modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                       {
@@ -48,6 +48,16 @@ rule
                           statements: val[8]
                         )
                       }
+                      | access_level type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                      {
+                        result = ApexInstanceMethodNode.new(
+                          access_level: val[0],
+                          return_type: val[1],
+                          name: value(val, 2),
+                          arguments: val[4],
+                          statements: val[7]
+                        )
+                      }
   static_method_def : access_level STATIC modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                     {
                       result = ApexStaticMethodNode.new(
@@ -56,6 +66,16 @@ rule
                         name: value(val, 4),
                         arguments: val[6],
                         statements: val[9]
+                      )
+                    }
+                    | access_level STATIC type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                    {
+                      result = ApexStaticMethodNode.new(
+                        access_level: val[0],
+                        return_type: val[2],
+                        name: value(val, 3),
+                        arguments: val[5],
+                        statements: val[8]
                       )
                     }
   empty_or_arguments :
@@ -88,16 +108,23 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
   while_stmt : WHILE L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE
              { result = WhileNode.new(condition: val[2], statements: val[5]) }
   assigns : assign { result = val[0] }
-          | IDENT ASSIGN assigns { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-  assign : IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-
-  expr  : number { result = val[0] }
+          | variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
+  assign : variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
+  variable : IDENT
+           | instance_variable
+expr  : number { result = val[0] }
+        | new_expr
         | STRING { result = ApexStringNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
         | call_class_method { result = val[0] }
         | call_method { result = val[0] }
         | IDENT { result = IdentifyNode.new(name: value(val, 0)) }
         | IDENT INSTANCE_OF U_IDENT
         | boolean
+        | instance_variable
+new_expr : NEW U_IDENT L_BRACE arguments R_BRACE
+         {
+           result = NewNode.new(apex_class_name: value(val, 1), arguments: value(val, 3))
+         }
   number : term
          | number ADD term {}
          | number SUB term {}
@@ -120,6 +147,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
                           arguments: val[4]
                         )
                       }
+instance_variable : expr DOT IDENT
   call_method : expr DOT IDENT L_BRACE call_arguments R_BRACE
                 { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], method_name: value(val, 2), arguments: val[4]) }
   call_arguments : call_argument { result = [val[0]] }
@@ -129,8 +157,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
   access_level : PUBLIC
                | PRIVATE
                | PROTECTED
-  modifier :
-           | ABSTRACT
+  modifier : ABSTRACT
            | FINAL
            | GLOBAL
   sharing :

@@ -13,9 +13,6 @@ class InterpreterVisitor
     end
   end
 
-  def visit_class_method(node, arguments)
-  end
-
   def visit_instance_variable
 
   end
@@ -72,6 +69,20 @@ class InterpreterVisitor
         statement.accept(self, local_scope)
       end
     end
+  end
+
+  def visit_new(node, local_scope)
+    apex_class_node = ApexClassTable[node.apex_class_name.to_sym]
+    object_node = ApexObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
+    instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name]
+    # expand node.arguments from local_scope
+    evaluated_arguments = node.arguments.map { |argument|
+      argument.accept(self, local_scope)
+    }
+    local_scope = {}
+    local_scope[:arg1] = evaluated_arguments[0]
+    local_scope[:this] = object_node
+    instance_method_node.accept(self, local_scope)
   end
 
   def visit_boolean(node, local_scope)

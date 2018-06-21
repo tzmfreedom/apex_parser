@@ -137,7 +137,7 @@ class ApexStringNode < ApexNode
 end
 
 class ApexObjectNode < ApexNode
-  attr_accessor :apex_class, :instance_variables
+  attr_accessor :apex_class_node, :arguments, :instance_variables
 
   def accept(visitor, local_scope)
     visitor.visit_object(self, local_scope)
@@ -160,9 +160,12 @@ class ApexDoubleNode < ApexNode
   end
 end
 
+class NewNode < ApexNode
+  attr_accessor :apex_class_name, :arguments
 
-class Environment
-  attr_accessor :variables
+  def accept(visitor, local_scope)
+    visitor.visit_new(self, local_scope)
+  end
 end
 
 class ApexClassTable
