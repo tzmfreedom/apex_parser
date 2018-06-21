@@ -66,6 +66,10 @@ class ApexInstanceMethodNode < ApexNode
   attr_accessor :name, :access_level, :return_type,
                 :arguments, :statements, :apex_class_name
 
+  def native?
+    false
+  end
+
   def add_to_class(klass)
     self.apex_class_name = klass.name
     klass.apex_instance_methods[name.to_sym] = self

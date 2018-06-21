@@ -12,7 +12,6 @@ class InterpreterVisitor
   end
 
   def visit_instance_variable
-
   end
 
   def visit_if(node, local_scope)
@@ -47,7 +46,20 @@ class InterpreterVisitor
   end
 
   def visit_call_instance_method(node, local_scope)
-    node.call(method_name, arguments, local_scope)
+    receiver_node = node.receiver.accept(self, local_scope)
+    class_node = ApexClassTable[receiver_node.apex_class_node.name]
+    method = class_node.apex_instance_methods[node.name.to_sym]
+
+    local_scope = check_argument(method, node.arguments, local_scope)
+    return unless local_scope
+
+    if method.native?
+      method.call(local_scope)
+    else
+      method.statements.each do |statement|
+        statement.accept(self, local_scope)
+      end
+    end
   end
 
   def visit_call_static_method(node, local_scope)

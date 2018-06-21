@@ -158,8 +158,10 @@ new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
                         )
                       }
 instance_variable : expr DOT IDENT
-  call_method : expr DOT IDENT L_BRACE call_arguments R_BRACE
-                { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], method_name: value(val, 2), arguments: val[4]) }
+  call_method : expr DOT IDENT L_BRACE empty_or_call_arguments R_BRACE
+                { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], name: value(val, 2), arguments: val[4] || []) }
+  empty_or_call_arguments :
+                          | call_arguments
   call_arguments : call_argument { result = [val[0]] }
                  | call_arguments COMMA call_argument { result = val[0].push(val[2]) }
   call_argument : expr

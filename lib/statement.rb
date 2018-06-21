@@ -1,5 +1,5 @@
 class CallInstanceMethodNode < ApexNode
-  attr_accessor :type, :receiver, :name, :method_name, :arguments, :expression
+  attr_accessor :type, :receiver, :name, :arguments, :expression
 
   def accept(visitor, local_scope)
     visitor.visit_call_instance_method(self, local_scope)

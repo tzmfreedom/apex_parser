@@ -8,6 +8,7 @@ public class Hoge {
         System.debug(a);
         System.debug(b);
         Hoge a = new Hoge();
+        a.fuga();
         System.debug(a);
         a = 5;
         System.debug(a);
@@ -24,5 +25,9 @@ public class Hoge {
 
     public Hoge() {
         System.debug('constructor');
+    }
+
+    public Integer fuga(){
+        System.debug('call fuga!!!');
     }
 }
