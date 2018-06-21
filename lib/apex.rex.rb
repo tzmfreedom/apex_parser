@@ -5,13 +5,13 @@ macro
   REMOUT \*\/
 rule
       {BLANK}
-      {REMIN}            { state = :REM; [:REM_IN, [text, lineno]] }
-:REM  {REMOUT}           { state = nil; [:REM_OUT, [text, lineno]] }
+      {REMIN}            { @state = :REM; [:REM_IN, [text, lineno]] }
+:REM  {REMOUT}           { @state = nil; [:REM_OUT, [text, lineno]] }
 :REM  (.+)(?={REMOUT})   { [:COMMENT, [text, lineno]] }
       \/\/.*\n           { [:COMMENT, [text, lineno]] }
-      \[                 { state = :SOQL; [:SOQL_IN, [text, lineno]] }
-:SOQL \]                 { state = nil; [:SOQL_OUT, [text, lineno]] }
-:SOQL (.+)(?=\])         { [:SOQL, [text, lineno]] }
+      \[                 { @state = :SOQL; [:SOQL_IN, [text, lineno]] }
+:SOQL \]                 { @state = nil; [:SOQL_OUT, [text, lineno]] }
+:SOQL ([^\]]+)(?=\])     { [:SOQL, [text, lineno]] }
       \[                 { [:LS_BRACE, [text, lineno]] }
       \]                 { [:RS_BRACE, [text, lineno]] }
       \{                 { [:LC_BRACE, [text, lineno]] }

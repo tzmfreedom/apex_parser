@@ -222,6 +222,18 @@ class NewNode < ApexNode
   end
 end
 
+class SoqlNode < ApexNode
+  attr_accessor :soql
+
+  def accept(visitor, local_scope)
+    visitor.visit_soql(self, local_scope)
+  end
+
+  def value
+    soql
+  end
+end
+
 class ApexClassTable
   attr_accessor :apex_classes
 

@@ -127,6 +127,10 @@ class InterpreterVisitor
     end
   end
 
+  def visit_soql(node, local_scope)
+    node
+  end
+
   def check_argument(method, arguments, local_scope)
     evaluated_arguments = arguments.map { |argument|
       argument.accept(self, local_scope)

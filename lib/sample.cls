@@ -12,7 +12,8 @@ public class Hoge {
         System.debug(a);
         a = 5;
         System.debug(a);
-        [aaaa];
+        a = [SELECT id FROM Account WHERE id = 1];
+        System.debug(a);
         System.debug(b);
         if (true) {
             System.debug('hello!!!');
