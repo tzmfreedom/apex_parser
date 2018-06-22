@@ -169,6 +169,14 @@ class ForNode < ApexNode
   end
 end
 
+class WhileNode < ApexNode
+  attr_accessor :condition_stmt, :statements
+
+  def accept(visitor, local_scope)
+    visitor.visit_while(self, local_scope)
+  end
+end
+
 class ForEnumNode < ApexNode
   attr_accessor :type, :ident, :list, :statements
 
@@ -213,7 +221,7 @@ class ApexObjectNode < ApexNode
   end
 
   def value
-    "#<#{apex_class_node.name}:#{object_id}>"
+    "#<#{apex_class_node.name.name}:#{object_id}>"
   end
 end
 
@@ -277,6 +285,12 @@ class ReturnNode < ApexNode
   def accept(visitor, local_scope)
     visitor.visit_return(self, local_scope)
   end
+end
+
+class BreakNode < ApexNode
+end
+
+class ContinueNode < ApexNode
 end
 
 class ApexClassTable

@@ -11,7 +11,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
   INSTANCE_OF TRUE FALSE IF ELSE FOR WHILE COLON
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
-  SOQL SOQL_IN SOQL_OUT NULL
+  SOQL SOQL_IN SOQL_OUT NULL CONTINUE BREAK
 
 rule
   class_or_trigger : class_def
@@ -100,6 +100,8 @@ rule
   stmt  : expr SEMICOLON
         | assigns SEMICOLON
         | return_stmt SEMICOLON
+        | break_stmt SEMICOLON
+        | continue_stmt SEMICOLON
         | variable_def SEMICOLON
         | boolean_stmt SEMICOLON
         | if_stmt
@@ -123,8 +125,8 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
            { result = ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
   empty_or_loop_stmt :
                      | loop_stmt
-  while_stmt : WHILE L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE
-             { result = WhileNode.new(condition: val[2], statements: val[5]) }
+  while_stmt : WHILE L_BRACE loop_stmt R_BRACE LC_BRACE stmts RC_BRACE
+             { result = WhileNode.new(condition_stmt: val[2], statements: val[5]) }
   assigns : assign
           | ident ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
           | instance_variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
@@ -147,11 +149,13 @@ new_expr : NEW ident L_BRACE empty_or_arguments R_BRACE
            result = NewNode.new(apex_class_name: val[1], arguments: val[3] && val[3])
          }
   number : term
-         | number ADD term {}
-         | number SUB term {}
+         | number ADD term { result = OperatorNode.new(type: :add, left: val[0], right: val[2]) }
+         | number SUB term { result = OperatorNode.new(type: :sub, left: val[0], right: val[2]) }
   term   : primary_expr
-         | term MUL primary_expr {}
-         | term DIV primary_expr {}
+         | term MUL primary_expr { result = OperatorNode.new(type: :mul, left: val[0], right: val[2]) }
+         | term DIV primary_expr { result = OperatorNode.new(type: :div, left: val[0], right: val[2]) }
+  break_stmt : BREAK { result = BreakNode.new }
+  continue_stmt : CONTINUE { result = ContinueNode.new }
   return_stmt : RETURN expr { result = ReturnNode.new(expression: val[1]) }
   primary_expr : INTEGER { result = ApexIntegerNode.new(value: value(val,0)) }
                | DOUBLE

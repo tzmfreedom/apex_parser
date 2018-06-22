@@ -40,6 +40,14 @@ class InterpreterVisitor
         else
           local_scope[node.left.name] = NULL
         end
+      when :add
+        ApexIntegerNode.new(value: node.left.accept(self, local_scope).value + node.right.accept(self, local_scope).value)
+      when :sub
+        ApexIntegerNode.new(value: node.left.accept(self, local_scope).value - node.right.accept(self, local_scope).value)
+      when :div
+        ApexIntegerNode.new(value: node.left.accept(self, local_scope).value / node.right.accept(self, local_scope).value)
+      when :mul
+        ApexIntegerNode.new(value: node.left.accept(self, local_scope).value * node.right.accept(self, local_scope).value)
       when :<
         BooleanNode.new(node.left.accept(self, local_scope).value < node.right.accept(self, local_scope).value)
       when :>
@@ -65,6 +73,16 @@ class InterpreterVisitor
     end
   end
 
+  def visit_while(node, local_scope)
+    new_local_scope = local_scope.dup
+
+    loop do
+      break if node.condition_stmt.accept(self, new_local_scope).value == false
+      return_value = execute_statement(node, new_local_scope, false)
+      return return_value if return_value
+    end
+  end
+
   def visit_forenum(node, local_scope)
     new_local_scope = local_scope.dup
     list_node = new_local_scope[node.list.name]
@@ -80,7 +98,14 @@ class InterpreterVisitor
       next_local_scope = HashWithUpperCasedSymbolicKey.new({ this: list_node })
       next_return_value = execute_statement(next_method, next_local_scope)
       new_local_scope[node.ident.name] = next_return_value
-      execute_statement(node, new_local_scope, false)
+      return_value = execute_statement(node, new_local_scope, false)
+      case return_value
+        when ReturnNode
+          return return_value
+        when BreakNode
+          return
+        when ContinueNode
+      end
     end
   end
 
@@ -150,7 +175,10 @@ class InterpreterVisitor
     else
       method_node.statements.each do |statement|
         return_value = statement.accept(self, local_scope)
-        return return_value.value if return_value.class == ReturnNode
+        # TODO: return_value.value
+        if [ReturnNode, ContinueNode, BreakNode].include?(return_value.class)
+          return return_value.value
+        end
       end
 
       if must_return

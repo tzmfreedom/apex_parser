@@ -4,28 +4,34 @@ public class Hoge {
 
     @aaa
     public static Integer action() {
+        System.debug('*** variable test assign***');
         Integer b = 100;
         System.debug(b);
         Integer a = b = 20;
         System.debug(a);
         System.debug(b);
+
+        System.debug('*** instance variable/method test ***');
         Hoge a = new Hoge();
+        System.debug(a);
         b = a.fuga();
-        System.debug(a.a);
         System.debug(b);
+        System.debug(a.a);
         a.a = 100;
         System.debug(a.a);
-        System.debug(a);
-        a = 5;
-        System.debug(a);
+
+        System.debug('*** list test ***');
         List accounts = new List();
         System.debug(accounts);
-        for(Acount acc : accounts){
+        for(Account acc : accounts){
             System.debug(acc);
         }
+
+        System.debug('*** soql test ***');
         a = [SELECT id FROM Account WHERE id = 1];
         System.debug(a);
-        System.debug(b);
+
+        System.debug('*** case test ***');
         if (true) {
             System.debug('hello!!!');
         } else if (false) {
@@ -33,9 +39,18 @@ public class Hoge {
         } else if (true) {
             System.debug('falseaaaa');
         }
+        System.debug('*** for loop ***');
         for (Integer i = 0; i < 2; i++) {
-            j = 0;
+            System.debug(i);
         }
+        System.debug('*** while loop ***');
+        i = 3;
+        while (i < 5) {
+          System.debug(i);
+          i++;
+        }
+        System.debug('*** add/sub/mul/div ***');
+        System.debug(1+4*5);
         return null;
     }
 
