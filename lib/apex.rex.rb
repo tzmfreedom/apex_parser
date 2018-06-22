@@ -20,13 +20,13 @@ rule
       \)                 { [:R_BRACE, [text, lineno]] }
       '[^']*'            { [:STRING, [text[1..-2], lineno]] }
       @\w+               { [:ANNOTATION, [text, lineno]] }
+      null               { [:NULL, [text, lineno]] }
       true               { [:TRUE, [text, lineno]] }
       false              { [:FALSE, [text, lineno]] }
       for                { [:FOR, [text, lineno]] }
       while              { [:WHILE, [text, lineno]] }
       if                 { [:IF, [text, lineno]] }
       else               { [:ELSE, [text, lineno]] }
-      this               { [:THIS, [text, lineno]] }
       insert             { [:INSERT, [text, lineno]] }
       delete             { [:DELETE, [text, lineno]] }
       undelete           { [:UNDELETE, [text, lineno]] }
@@ -75,5 +75,5 @@ rule
       ;                  { [:SEMICOLON, [text, lineno]]}
       ,                  { [:COMMA, [text, lineno]] }
       \.                 { [:DOT, [text, lineno]] }
-      .                { [text, [text, lineno]] }
+      .                  { [text, [text, lineno]] }
 end

@@ -62,7 +62,7 @@ class ApexStaticMethodNode < ApexNode
   end
 end
 
-class ApexInstanceMethodNode < ApexNode
+class ApexDefInstanceMethodNode < ApexNode
   attr_accessor :name, :access_level, :return_type,
                 :arguments, :statements, :apex_class_name
 
@@ -93,14 +93,23 @@ class ApexStaticVariableNode < ApexNode
 end
 
 class InstanceVariableNode < ApexNode
-  attr_accessor :type, :name, :access_level, :expression
+  attr_accessor :receiver, :name
+
+  def accept(visitor, local_scope)
+    visitor.visit_instance_variable(self, local_scope)
+  end
+end
+
+class DefInstanceVariableNode < ApexNode
+  attr_accessor :type, :name, :access_level, :expression, :apex_class_node
 
   def add_to_class(klass)
+    self.apex_class_node = klass
     klass.apex_instance_variables[name.to_sym] = self
   end
 
-  def accept(visitor)
-    visitor.visit_instance_variable(self)
+  def accept(visitor, local_scope)
+    visitor.visit_def_instance_variable(self, local_scope)
   end
 end
 
@@ -181,7 +190,7 @@ class ApexStringNode < ApexNode
 end
 
 class ApexObjectNode < ApexNode
-  attr_accessor :apex_class_node, :arguments, :instance_variables
+  attr_accessor :apex_class_node, :arguments, :apex_instance_variables
 
   def accept(visitor, local_scope)
     visitor.visit_object(self, local_scope)
@@ -189,6 +198,18 @@ class ApexObjectNode < ApexNode
 
   def value
     "#<#{apex_class_node.name}:#{object_id}>"
+  end
+end
+
+class NullNode < ApexNode
+  def initialize; end
+
+  def accept(visitor, local_scope)
+    visitor.visit_null(self, local_scope)
+  end
+
+  def value
+    nil
   end
 end
 
@@ -234,6 +255,14 @@ class SoqlNode < ApexNode
   end
 end
 
+class ReturnNode < ApexNode
+  attr_accessor :value, :expression
+
+  def accept(visitor, local_scope)
+    visitor.visit_return(self, local_scope)
+  end
+end
+
 class ApexClassTable
   attr_accessor :apex_classes
 
@@ -255,6 +284,7 @@ class ApexClassCreatetor
 
   def initialize
     yield(self)
+    register
   end
 
   def add_class(name, access_level)
@@ -262,7 +292,26 @@ class ApexClassCreatetor
     @apex_class_access_level = access_level
   end
 
-  def add_method(name, access_level, return_type, arguments, &block)
+  def add_instance_method(name, access_level, return_type, arguments, &block)
+    method = ApexDefInstanceMethodNode.new(
+      name: name,
+      access_level: access_level,
+      return_type: return_type,
+      arguments: arguments.map { |argument| ArgumentNode.new(type: argument[0], name: argument[1]) },
+    )
+    method.instance_eval do
+      define_singleton_method(:native?) do
+        true
+      end
+
+      define_singleton_method(:call) do |local_scope|
+        block.call(local_scope)
+      end
+    end
+    (@apex_methods ||= []) << method
+  end
+
+  def add_static_method(name, access_level, return_type, arguments, &block)
     method = ApexStaticMethodNode.new(
       name: name,
       access_level: access_level,
@@ -282,15 +331,38 @@ class ApexClassCreatetor
   end
 
   def register
-    @apex_class = ApexClassNode.new(access_level: @apex_class_access_level, name: @apex_class_name, statements: @apex_methods)
+    @apex_class = ApexClassNode.new(
+      access_level: @apex_class_access_level,
+      name: @apex_class_name,
+      statements: @apex_methods
+    )
     ApexClassTable.register(@apex_class.name, @apex_class)
   end
 end
 
 ApexClassCreatetor.new do |c|
   c.add_class(:System, :public)
-  c.add_method(:debug, :public, :String, [[:Object, :object]]) do |local_scope|
+  c.add_static_method(:debug, :public, :String, [[:Object, :object]]) do |local_scope|
     puts local_scope[:object].value
   end
-  c.register
+end
+
+ApexClassCreatetor.new do |c|
+  c.add_class(:List, :public)
+  c.add_instance_method(:List, :public, :void, []) do |local_scope|
+    this = local_scope[:this]
+    this.apex_instance_variables[:records] = [ApexIntegerNode.new(value: 1001), ApexIntegerNode.new(value: 2001)]
+  end
+  c.add_instance_method(:next, :public, :Account, []) do |local_scope|
+    this = local_scope[:this]
+    idx = this.apex_instance_variables[:_idx] ||= 0
+    this.apex_instance_variables[:_idx] += 1
+    this.apex_instance_variables[:records][idx]
+  end
+  c.add_instance_method(:has_next, :public, :Boolean, []) do |local_scope|
+    this = local_scope[:this]
+    this.apex_instance_variables[:records]
+    idx = this.apex_instance_variables[:_idx] ||= 0
+    BooleanNode.new(idx < this.apex_instance_variables[:records].length)
+  end
 end

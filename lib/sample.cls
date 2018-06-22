@@ -8,10 +8,19 @@ public class Hoge {
         System.debug(a);
         System.debug(b);
         Hoge a = new Hoge();
-        a.fuga();
+        b = a.fuga();
+        System.debug(a.a);
+        System.debug(b);
+        a.a = 100;
+        System.debug(a.a);
         System.debug(a);
         a = 5;
         System.debug(a);
+        List accounts = new List();
+        System.debug(accounts);
+        for(Acount acc : accounts){
+            System.debug(acc);
+        }
         a = [SELECT id FROM Account WHERE id = 1];
         System.debug(a);
         System.debug(b);
@@ -33,6 +42,8 @@ public class Hoge {
     }
 
     public Integer fuga(){
-        System.debug('call fuga!!!');
+        this.a = 10000000;
+        System.debug(this.a);
+        return 12345;
     }
 }

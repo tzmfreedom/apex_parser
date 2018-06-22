@@ -6,12 +6,12 @@ preclow
 
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   U_IDENT CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
-  RETURN DOT STRING THIS REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
+  RETURN DOT STRING REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
-  INSTANCE_OF RETURN TRUE FALSE IF ELSE FOR WHILE COLON
+  INSTANCE_OF TRUE FALSE IF ELSE FOR WHILE COLON
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
-  SOQL SOQL_IN SOQL_OUT
+  SOQL SOQL_IN SOQL_OUT NULL
 
 rule
   class_or_trigger : class_def
@@ -37,12 +37,12 @@ rule
              | constructor_def
              | instance_variable_def SEMICOLON
 
-  instance_variable_def : access_level type IDENT { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2)) }
+  instance_variable_def : access_level type IDENT { result = DefInstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2)) }
                         | access_level type IDENT ASSIGN expr
-                        { result = InstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2), expression: val[4]) }
+                        { result = DefInstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2), expression: val[4]) }
   constructor_def : access_level U_IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                   {
-                    result = ApexInstanceMethodNode.new(
+                    result = ApexDefInstanceMethodNode.new(
                       access_level: val[0],
                       return_type: :void,
                       name: value(val, 1),
@@ -52,7 +52,7 @@ rule
                   }
   instance_method_def : access_level modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                       {
-                        result = ApexInstanceMethodNode.new(
+                        result = ApexDefInstanceMethodNode.new(
                           access_level: val[0],
                           return_type: val[2],
                           name: value(val, 3),
@@ -62,7 +62,7 @@ rule
                       }
                       | access_level type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                       {
-                        result = ApexInstanceMethodNode.new(
+                        result = ApexDefInstanceMethodNode.new(
                           access_level: val[0],
                           return_type: val[1],
                           name: value(val, 2),
@@ -128,8 +128,8 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
              { result = WhileNode.new(condition: val[2], statements: val[5]) }
   assigns : assign
           | variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-  assign : variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-  variable : IDENT
+  assign : variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+  variable : IDENT { result = value(val, 0)}
            | instance_variable
   expr  : number
         | new_expr
@@ -139,6 +139,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
         | IDENT { result = IdentifyNode.new(name: value(val, 0)) }
         | IDENT INSTANCE_OF U_IDENT
         | boolean
+        | NULL { result = NullNode.new }
         | instance_variable
         | unary_operator IDENT { result = OperatorNode.new(type: val[0], left: value(val, 1))}
         | IDENT unary_operator { result = OperatorNode.new(type: val[1], left: value(val, 0))}
@@ -153,7 +154,7 @@ new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
   term   : primary_expr
          | term MUL primary_expr {}
          | term DIV primary_expr {}
-  return_stmt : RETURN expr { result = OperatorNode.new(type: :return, left: val[1]) }
+  return_stmt : RETURN expr { result = ReturnNode.new(expression: val[1]) }
   primary_expr : INTEGER { result = ApexIntegerNode.new(value: value(val, 0)) }
                | DOUBLE
   variable_def : type IDENT { result = OperatorNode.new(type: :define, left: value(val, 1)) }
@@ -169,7 +170,7 @@ new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
                           arguments: val[4]
                         )
                       }
-instance_variable : expr DOT IDENT
+instance_variable : expr DOT IDENT { result = InstanceVariableNode.new(receiver: val[0], name: value(val, 2)) }
   call_method : expr DOT IDENT L_BRACE empty_or_call_arguments R_BRACE
                 { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], name: value(val, 2), arguments: val[4] || []) }
   empty_or_call_arguments :
