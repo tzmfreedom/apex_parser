@@ -24,32 +24,32 @@ class InterpreterVisitor
   def visit_operator(node, local_scope)
     case node.type.to_sym
       when :assign
-        if node.left.class == String
-          local_scope[node.left.to_sym] = node.right.accept(self, local_scope)
-        else
+        if node.left.class == IdentifyNode
+          local_scope[node.left.name] = node.right.accept(self, local_scope)
+        elsif
           receiver_node = node.left.receiver.accept(self, local_scope)
-          receiver_node.apex_instance_variables[node.left.name.to_sym] = node.right.accept(self, local_scope)
+          receiver_node.apex_instance_variables[node.left.name.name] = node.right.accept(self, local_scope)
         end
       when :define
-        if local_scope[node.left.to_sym]
+        if local_scope[node.left.name]
           # TODO: Define Duplicate Error
         end
 
         if node.right
-          local_scope[node.left.to_sym] = node.right.accept(self, local_scope)
+          local_scope[node.left.name] = node.right.accept(self, local_scope)
         else
-          local_scope[node.left.to_sym] = NULL
+          local_scope[node.left.name] = NULL
         end
       when :<
         BooleanNode.new(node.left.accept(self, local_scope).value < node.right.accept(self, local_scope).value)
       when :>
         BooleanNode.new(node.left.accept(self, local_scope).value > node.right.accept(self, local_scope).value)
       when :plus_plus
-        value = local_scope[node.left.to_sym].value
-        local_scope[node.left.to_sym] = ApexIntegerNode.new(value: value + 1)
+        value = local_scope[node.left.name].value
+        local_scope[node.left.name] = ApexIntegerNode.new(value: value + 1)
       when :minus_minus
-      value = local_scope[node.left.to_sym].value
-      local_scope[node.left.to_sym] = ApexIntegerNode.new(value: value - 1)
+      value = local_scope[node.left.name].value
+      local_scope[node.left.name] = ApexIntegerNode.new(value: value - 1)
     end
   end
 
@@ -67,19 +67,19 @@ class InterpreterVisitor
 
   def visit_forenum(node, local_scope)
     new_local_scope = local_scope.dup
-    list_node = new_local_scope[node.list.to_sym]
+    list_node = new_local_scope[node.list.name]
     next_method = list_node.apex_class_node.apex_instance_methods[:next]
     has_next_method= list_node.apex_class_node.apex_instance_methods[:has_next]
 
     loop do
-      has_next_local_scope = { this: list_node }
+      has_next_local_scope = HashWithUpperCasedSymbolicKey.new({ this: list_node })
       has_next_return_node = execute_statement(has_next_method, has_next_local_scope)
 
       break if has_next_return_node.value == false
 
-      next_local_scope = { this: list_node }
+      next_local_scope = HashWithUpperCasedSymbolicKey.new({ this: list_node })
       next_return_value = execute_statement(next_method, next_local_scope)
-      new_local_scope[node.ident.to_sym] = next_return_value
+      new_local_scope[node.ident.name] = next_return_value
       execute_statement(node, new_local_scope, false)
     end
   end
@@ -89,16 +89,16 @@ class InterpreterVisitor
   end
 
   def visit_new(node, local_scope)
-    apex_class_node = ApexClassTable[node.apex_class_name.to_sym]
+    apex_class_node = ApexClassTable[node.apex_class_name]
     object_node = ApexObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
 
     # assign instance variables
-    object_node.apex_instance_variables = apex_class_node.apex_instance_variables.map do |variable_name, variable_node|
-      [variable_name, variable_node.accept(self, {})]
-    end.to_h
+    object_node.apex_instance_variables = HashWithUpperCasedSymbolicKey.new(apex_class_node.apex_instance_variables.map do |variable_name, variable_node|
+      [variable_name, variable_node.accept(self, HashWithUpperCasedSymbolicKey.new)]
+    end.to_h)
 
     # constructor
-    instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name.to_sym]
+    instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name.name]
     return object_node unless instance_method_node
 
     # check constructor argument
@@ -106,7 +106,7 @@ class InterpreterVisitor
     return unless new_local_scope
 
     # execute constructor argument
-    new_local_scope = {}
+    new_local_scope = HashWithUpperCasedSymbolicKey.new
     new_local_scope[:this] = object_node
     execute_statement(instance_method_node, new_local_scope, false)
     object_node
@@ -117,37 +117,31 @@ class InterpreterVisitor
 
   def visit_def_instance_variable(node, local_scope)
     class_node = node.apex_class_node
-    expression = class_node.apex_instance_variables[node.name.to_sym].expression
+    expression = class_node.apex_instance_variables[node.name.name].expression
     return unless expression
     expression.accept(self, local_scope)
   end
 
   def visit_instance_variable(node, local_scope)
-    receiver = local_scope[node.receiver.name.to_sym]
-    receiver.apex_instance_variables[node.name.to_sym]
+    receiver = local_scope[node.receiver.name]
+    receiver.apex_instance_variables[node.name.name]
   end
 
-  def visit_call_instance_method(node, local_scope)
-    receiver_node = node.receiver.accept(self, local_scope)
-    class_node = receiver_node.apex_class_node
-    method = class_node.apex_instance_methods[node.name.to_sym]
+  def visit_call_method(node, local_scope)
+    # binding.pry if node.receiver.name == 'System'
+    receiver_node = local_scope[node.receiver.name] || ApexClassTable[node.receiver]
+    method =
+      if receiver_node.is_a?(ApexClassNode)
+        receiver_node.apex_static_methods[node.apex_method_name.name]
+      else
+        class_node = receiver_node.apex_class_node
+        class_node.apex_instance_methods[node.apex_method_name.name]
+      end
+    new_local_scope = check_argument(method, node.arguments, local_scope)
+    return unless new_local_scope
 
-    local_scope = check_argument(method, node.arguments, local_scope)
-    return unless local_scope
-
-    new_local_scope = {}
     new_local_scope[:this] = receiver_node
     execute_statement(method, new_local_scope)
-  end
-
-  def visit_call_static_method(node, local_scope)
-    class_node = ApexClassTable[node.apex_class_name]
-    method = class_node.apex_static_methods[node.apex_method_name.to_sym]
-
-    local_scope = check_argument(method, node.arguments, local_scope)
-    return unless local_scope
-
-    execute_statement(method, local_scope)
   end
 
   def execute_statement(method_node, local_scope, must_return = true)
@@ -167,6 +161,10 @@ class InterpreterVisitor
     end
   end
 
+  def visit_annotation(node, local_scope)
+    node
+  end
+
   def visit_soql(node, local_scope)
     node
   end
@@ -182,14 +180,14 @@ class InterpreterVisitor
       return
     end
 
-    new_local_scope = {}
+    new_local_scope = HashWithUpperCasedSymbolicKey.new
     evaluated_arguments.each_with_index do |evaluated_argument, idx|
       if method.arguments[idx].type != AnyObject && evaluated_argument.class != method.arguments[idx].type
         # TODO: Error Handling
         puts "Error!!"
         return
       end
-      variable_name = method.arguments[idx].name.to_sym
+      variable_name = method.arguments[idx].name
       new_local_scope[variable_name] = evaluated_argument
     end
     new_local_scope
@@ -204,7 +202,7 @@ class InterpreterVisitor
   end
 
   def visit_identify(node, local_scope)
-    local_scope[node.name.to_sym]
+    local_scope[node.name]
   end
 
   def visit_string(node, local_scope)

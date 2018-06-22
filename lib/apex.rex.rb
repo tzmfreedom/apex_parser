@@ -57,8 +57,7 @@ rule
       instance_of        { [:INSTANCE_OF, [text, lineno]] }
       return             { [:RETURN, [text, lineno]] }
       \d+                { [:INTEGER, [text.to_i, lineno]] }
-      [A-Z]\w*           { [:U_IDENT, [text, lineno]] }
-      [a-z]\w*           { [:IDENT, [text, lineno]] }
+      [a-zA-Z][a-zA-Z0-9]* { [:IDENT, [text, lineno]] }
       \n
       \+                 { [:ADD, [text, lineno]] }
       \-                 { [:SUB, [text, lineno]] }

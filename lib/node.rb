@@ -1,3 +1,23 @@
+class HashWithUpperCasedSymbolicKey
+  attr_accessor :env
+
+  def initialize(init_hash = {})
+    @env = {}
+    init_hash.map { |k, v| @env[k.upcase.to_sym] = v }
+  end
+
+  def []=(key, value)
+    @env[key.upcase.to_sym] = value
+  end
+
+  def [](key)
+    @env[key.upcase.to_sym]
+  end
+
+  def map(&block)
+    @env.map(&block)
+  end
+end
 
 class ApexNode
   attr_accessor :lineno
@@ -6,10 +26,6 @@ class ApexNode
     self.class.attributes.each do |attr|
       public_send("#{attr}=", args[attr])
     end
-  end
-
-  def inspect
-    self.class.attributes.map { |attr| "#{attr} => #{send(attr)}" }
   end
 
   class << self
@@ -29,10 +45,10 @@ class ApexClassNode < ApexNode
 
   def initialize(args = {})
     super
-    @apex_instance_methods = {}
-    @apex_static_methods = {}
-    @apex_static_variables = {}
-    @apex_instance_variables = {}
+    @apex_instance_methods = HashWithUpperCasedSymbolicKey.new
+    @apex_static_methods = HashWithUpperCasedSymbolicKey.new
+    @apex_static_variables = HashWithUpperCasedSymbolicKey.new
+    @apex_instance_variables = HashWithUpperCasedSymbolicKey.new
 
     statements.each do |statement|
       statement.add_to_class(self)
@@ -54,7 +70,7 @@ class ApexStaticMethodNode < ApexNode
 
   def add_to_class(klass)
     self.apex_class_name = klass.name
-    klass.apex_static_methods[name.to_sym] = self
+    klass.apex_static_methods[name.name] = self
   end
 
   def accept(visitor)
@@ -72,7 +88,7 @@ class ApexDefInstanceMethodNode < ApexNode
 
   def add_to_class(klass)
     self.apex_class_name = klass.name
-    klass.apex_instance_methods[name.to_sym] = self
+    klass.apex_instance_methods[name.name] = self
   end
 
   def accept(visitor, local_scope)
@@ -84,7 +100,7 @@ class ApexStaticVariableNode < ApexNode
   attr_accessor :type, :name, :access_level, :expression
 
   def add_to_class(klass)
-    klass.apex_static_variables[name.to_sym] = self
+    klass.apex_static_variables[name.name] = self
   end
 
   def accept(visitor)
@@ -105,7 +121,7 @@ class DefInstanceVariableNode < ApexNode
 
   def add_to_class(klass)
     self.apex_class_node = klass
-    klass.apex_instance_variables[name.to_sym] = self
+    klass.apex_instance_variables[name.name] = self
   end
 
   def accept(visitor, local_scope)
@@ -268,18 +284,51 @@ class ApexClassTable
 
   class << self
     def register(name, apex_class)
-      (@apex_classes ||= {})[name.to_sym] = apex_class
+      (@apex_classes ||= HashWithUpperCasedSymbolicKey.new)[name.name] = apex_class
     end
 
     def [](name)
-      @apex_classes[name.to_sym]
+      @apex_classes[name.name]
     end
+  end
+end
+
+class AnnotationNode < ApexNode
+  attr_accessor :name
+
+  def initialize(name)
+    @name = name
+  end
+
+  def accept(visitor, local_scope)
+    visitor.visit_annotation(self, local_scope)
+  end
+end
+
+class CallMethodNode < ApexNode
+  attr_accessor :receiver, :arguments, :apex_method_name
+
+  def initialize(*args)
+    super
+    @arguments ||= []
+  end
+
+  def accept(visitor, local_scope)
+    visitor.visit_call_method(self, local_scope)
+  end
+end
+
+class OperatorNode < ApexNode
+  attr_accessor :type, :left, :operator, :right
+
+  def accept(visitor, local_scope)
+    visitor.visit_operator(self, local_scope)
   end
 end
 
 class AnyObject; end
 
-class ApexClassCreatetor
+class ApexClassCreator
   attr_accessor :apex_class_name, :apex_class_access_level, :apex_methods
 
   def initialize
@@ -294,7 +343,7 @@ class ApexClassCreatetor
 
   def add_instance_method(name, access_level, return_type, arguments, &block)
     method = ApexDefInstanceMethodNode.new(
-      name: name,
+      name: IdentifyNode.new(name: name),
       access_level: access_level,
       return_type: return_type,
       arguments: arguments.map { |argument| ArgumentNode.new(type: argument[0], name: argument[1]) },
@@ -313,7 +362,7 @@ class ApexClassCreatetor
 
   def add_static_method(name, access_level, return_type, arguments, &block)
     method = ApexStaticMethodNode.new(
-      name: name,
+      name: IdentifyNode.new(name: name),
       access_level: access_level,
       return_type: return_type,
       arguments: arguments.map { |argument| ArgumentNode.new(type: argument[0], name: argument[1]) },
@@ -333,21 +382,21 @@ class ApexClassCreatetor
   def register
     @apex_class = ApexClassNode.new(
       access_level: @apex_class_access_level,
-      name: @apex_class_name,
+      name: IdentifyNode.new(name: @apex_class_name),
       statements: @apex_methods
     )
     ApexClassTable.register(@apex_class.name, @apex_class)
   end
 end
 
-ApexClassCreatetor.new do |c|
+ApexClassCreator.new do |c|
   c.add_class(:System, :public)
   c.add_static_method(:debug, :public, :String, [[:Object, :object]]) do |local_scope|
     puts local_scope[:object].value
   end
 end
 
-ApexClassCreatetor.new do |c|
+ApexClassCreator.new do |c|
   c.add_class(:List, :public)
   c.add_instance_method(:List, :public, :void, []) do |local_scope|
     this = local_scope[:this]

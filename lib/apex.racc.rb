@@ -5,7 +5,7 @@ prechigh
 preclow
 
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
-  U_IDENT CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
+  CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
   RETURN DOT STRING REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
@@ -16,12 +16,11 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
 rule
   class_or_trigger : class_def
                    | trigger_def
-  type : U_IDENT { result = value(val, 0) }
-  trigger_def : TRIGGER U_IDENT ON type L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
+  trigger_def : TRIGGER ident ON ident L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
               {
                 result = [:trigger, val[1], val[3], val[7]]
               }
-  class_def : access_level CLASS sharing type LC_BRACE class_stmts RC_BRACE
+  class_def : access_level CLASS sharing ident LC_BRACE class_stmts RC_BRACE
             {
               result = ApexClassNode.new(
                 access_level: val[0],
@@ -37,64 +36,64 @@ rule
              | constructor_def
              | instance_variable_def SEMICOLON
 
-  instance_variable_def : access_level type IDENT { result = DefInstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2)) }
-                        | access_level type IDENT ASSIGN expr
-                        { result = DefInstanceVariableNode.new(access_level: val[0], type: val[1], name: value(val, 2), expression: val[4]) }
-  constructor_def : access_level U_IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+  instance_variable_def : empty_or_annotations access_level ident ident { result = DefInstanceVariableNode.new(access_level: val[1], type: val[2], name: val[3]) }
+                        | empty_or_annotations access_level ident ident ASSIGN expr
+                        { result = DefInstanceVariableNode.new(access_level: val[1], type: val[2], name: val[3], expression: val[5]) }
+  constructor_def : empty_or_annotations access_level ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                   {
                     result = ApexDefInstanceMethodNode.new(
-                      access_level: val[0],
+                      access_level: val[1],
                       return_type: :void,
-                      name: value(val, 1),
-                      arguments: val[3] || [],
-                      statements: val[6]
+                      name: val[2],
+                      arguments: val[4] || [],
+                      statements: val[7]
                     )
                   }
-  instance_method_def : access_level modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+  instance_method_def : empty_or_annotations access_level modifier ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                       {
                         result = ApexDefInstanceMethodNode.new(
-                          access_level: val[0],
+                          access_level: val[1],
+                          return_type: val[3],
+                          name: val[4],
+                          arguments: val[6] || [],
+                          statements: val[9]
+                        )
+                      }
+                      | empty_or_annotations access_level ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                      {
+                        result = ApexDefInstanceMethodNode.new(
+                          access_level: val[1],
                           return_type: val[2],
-                          name: value(val, 3),
+                          name: val[3],
                           arguments: val[5] || [],
                           statements: val[8]
                         )
                       }
-                      | access_level type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-                      {
-                        result = ApexDefInstanceMethodNode.new(
-                          access_level: val[0],
-                          return_type: val[1],
-                          name: value(val, 2),
-                          arguments: val[4] || [],
-                          statements: val[7]
-                        )
-                      }
-  static_method_def : access_level STATIC modifier type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+  static_method_def : empty_or_annotations access_level STATIC modifier ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                     {
                       result = ApexStaticMethodNode.new(
-                        access_level: val[0],
-                        return_type: val[3],
-                        name: value(val, 4),
-                        arguments: val[6] || [],
-                        statements: val[9]
+                        access_level: val[1],
+                        return_type: val[4],
+                        name: val[5],
+                        arguments: val[7] || [],
+                        statements: val[10]
                       )
                     }
-                    | access_level STATIC type IDENT L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                    | empty_or_annotations access_level STATIC ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                     {
                       result = ApexStaticMethodNode.new(
-                        access_level: val[0],
-                        return_type: val[2],
-                        name: value(val, 3),
-                        arguments: val[5] || [],
-                        statements: val[8]
+                        access_level: val[1],
+                        return_type: val[3],
+                        name: val[4],
+                        arguments: val[6] || [],
+                        statements: val[9]
                       )
                     }
   empty_or_arguments :
                      | arguments
   arguments : argument { result = [val[0]] }
             | arguments COMMA argument { result = val[0].push(val[2]) }
-  argument : type IDENT { result = ArgumentNode.new(type: val[0], name: val[1]) }
+  argument : ident ident { result = ArgumentNode.new(type: val[0], name: val[1]) }
 
   stmts : stmt { result = [val[0]] }
         | stmts stmt { result = val[0].push(val[1]) }
@@ -120,33 +119,32 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
            | ELSE stmt { result = [val[1]] }
   for_stmt : FOR L_BRACE empty_or_loop_stmt SEMICOLON empty_or_loop_stmt SEMICOLON empty_or_loop_stmt R_BRACE LC_BRACE stmts RC_BRACE
            { result = ForNode.new(init_stmt: val[2], exit_condition: val[4], increment_stmt: val[6], statements: val[9]) }
-           | FOR L_BRACE type IDENT COLON IDENT R_BRACE LC_BRACE stmts RC_BRACE
-           { result = ForEnumNode.new(type: val[2], ident: value(val, 3), list: value(val, 5), statements: val[8]) }
+           | FOR L_BRACE ident ident COLON ident R_BRACE LC_BRACE stmts RC_BRACE
+           { result = ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
   empty_or_loop_stmt :
                      | loop_stmt
   while_stmt : WHILE L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE
              { result = WhileNode.new(condition: val[2], statements: val[5]) }
   assigns : assign
-          | variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-  assign : variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
-  variable : IDENT { result = value(val, 0)}
-           | instance_variable
+          | ident ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+          | instance_variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+  assign : ident ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+         | instance_variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
   expr  : number
         | new_expr
         | STRING { result = ApexStringNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
-        | call_class_method
         | call_method
-        | IDENT { result = IdentifyNode.new(name: value(val, 0)) }
-        | IDENT INSTANCE_OF U_IDENT
+        | ident INSTANCE_OF ident
+        | ident
+        | instance_variable
         | boolean
         | NULL { result = NullNode.new }
-        | instance_variable
-        | unary_operator IDENT { result = OperatorNode.new(type: val[0], left: value(val, 1))}
-        | IDENT unary_operator { result = OperatorNode.new(type: val[1], left: value(val, 0))}
+        | unary_operator ident { result = OperatorNode.new(type: val[0], left: val[1])}
+        | ident unary_operator { result = OperatorNode.new(type: val[1], left: val[0])}
         | SOQL_IN SOQL SOQL_OUT { result = SoqlNode.new(soql: value(val,1)) }
-new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
+new_expr : NEW ident L_BRACE empty_or_arguments R_BRACE
          {
-           result = NewNode.new(apex_class_name: value(val, 1), arguments: val[3] && value(val, 3))
+           result = NewNode.new(apex_class_name: val[1], arguments: val[3] && val[3])
          }
   number : term
          | number ADD term {}
@@ -155,24 +153,22 @@ new_expr : NEW U_IDENT L_BRACE empty_or_arguments R_BRACE
          | term MUL primary_expr {}
          | term DIV primary_expr {}
   return_stmt : RETURN expr { result = ReturnNode.new(expression: val[1]) }
-  primary_expr : INTEGER { result = ApexIntegerNode.new(value: value(val, 0)) }
+  primary_expr : INTEGER { result = ApexIntegerNode.new(value: value(val,0)) }
                | DOUBLE
-  variable_def : type IDENT { result = OperatorNode.new(type: :define, left: value(val, 1)) }
-               | type IDENT ASSIGN def_assigns
-               { result = OperatorNode.new(type: :define, left: value(val, 1), right: val[3]) }
+  variable_def : ident ident { result = OperatorNode.new(type: :define, left: val[1]) }
+               | ident ident ASSIGN def_assigns
+               { result = OperatorNode.new(type: :define, left: val[1], right: val[3]) }
   def_assigns : expr
-              | IDENT ASSIGN expr { result = OperatorNode.new(type: :assign, left: value(val, 0), right: val[2]) }
-  call_class_method : type DOT IDENT L_BRACE call_arguments R_BRACE
-                      {
-                        result = CallStaticMethodNode.new(
-                          apex_class_name: val[0],
-                          apex_method_name: value(val, 2),
-                          arguments: val[4]
-                        )
-                      }
-instance_variable : expr DOT IDENT { result = InstanceVariableNode.new(receiver: val[0], name: value(val, 2)) }
-  call_method : expr DOT IDENT L_BRACE empty_or_call_arguments R_BRACE
-                { result = CallInstanceMethodNode.new(type: :call, receiver: val[0], name: value(val, 2), arguments: val[4] || []) }
+              | ident ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+  call_method : expr DOT ident L_BRACE empty_or_call_arguments R_BRACE
+              {
+                result = CallMethodNode.new(
+                  receiver: val[0],
+                  apex_method_name: val[2],
+                  arguments: val[4]
+                )
+              }
+instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver: val[0], name: val[2]) }
   empty_or_call_arguments :
                           | call_arguments
   call_arguments : call_argument { result = [val[0]] }
@@ -197,8 +193,14 @@ instance_variable : expr DOT IDENT { result = InstanceVariableNode.new(receiver:
              | GREATER_THAN_EQUAL
              | NOT_EQUAL
              | EQUAL
+  empty_or_annotations :
+                       | annotations
+  annotations : annotation { result = [val[0]]}
+              | annotations annotation { result = val[0].push(val[1]) }
+  annotation : ANNOTATION { result = AnnotationNode.new(val[0]) }
   unary_operator: ADD ADD { result = :plus_plus }
                 | SUB SUB { resutl = :minus_minus }
+  ident : IDENT { result = IdentifyNode.new(name: value(val, 0)) }
 end
 
 ---- header

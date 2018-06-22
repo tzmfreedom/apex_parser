@@ -1,16 +1,21 @@
 require './lib/apex'
-require './lib/statement'
 require './lib/visitor'
+require './lib/statement'
+require 'json'
+
+require 'bundler'
+
+Bundler.require
 
 parser = ApexCompiler.new
 
 interpreter = InterpreterVisitor.new
-class_node = parser.scan_str(STDIN.read)
+class_node = parser.scan_str(File.read('./lib/sample.cls'))
 class_node.accept(interpreter)
 
-call_class_method_node = CallStaticMethodNode.new(
-  apex_class_name: class_node.name,
+call_method_node = CallMethodNode.new(
+  receiver: class_node.name,
   arguments: [],
-  apex_method_name: :action
+  apex_method_name: IdentifyNode.new(name: :action)
 )
-call_class_method_node.accept(interpreter, {})
+call_method_node.accept(interpreter, {})

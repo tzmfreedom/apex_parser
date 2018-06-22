@@ -1,6 +1,8 @@
 public class Hoge {
     public Integer a;
     public Integer b = 1;
+
+    @aaa
     public static Integer action() {
         Integer b = 100;
         System.debug(b);
@@ -31,8 +33,8 @@ public class Hoge {
         } else if (true) {
             System.debug('falseaaaa');
         }
-        for (Integer i = 0; i < 10; i++) {
-            System.debug(i);
+        for (Integer i = 0; i < 2; i++) {
+            j = 0;
         }
         return null;
     }
