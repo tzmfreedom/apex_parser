@@ -4,6 +4,8 @@ public class Hoge {
 
     @aaa
     public static Integer action() {
+        new Fuga().aaa();
+        System.debug(new Fuga());
         System.debug('*** variable test assign***');
         Integer b = 100;
         System.debug(b);
@@ -62,5 +64,11 @@ public class Hoge {
         this.a = 10000000;
         System.debug(this.a);
         return 12345;
+    }
+
+    public Integer foo() {
+        this.accounts = [SELECT id FROM Account];
+        this.contacts = [SELECT id FROM Contact];
+        return 1;
     }
 }

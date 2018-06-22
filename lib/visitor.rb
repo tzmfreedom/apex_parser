@@ -154,7 +154,7 @@ class InterpreterVisitor
 
   def visit_call_method(node, local_scope)
     # binding.pry if node.receiver.name == 'System'
-    receiver_node = local_scope[node.receiver.name] || ApexClassTable[node.receiver]
+    receiver_node = node.receiver.accept(self, local_scope)
     method =
       if receiver_node.is_a?(ApexClassNode)
         receiver_node.apex_static_methods[node.apex_method_name.name]
@@ -230,7 +230,7 @@ class InterpreterVisitor
   end
 
   def visit_identify(node, local_scope)
-    local_scope[node.name]
+    local_scope[node.name] || ApexClassTable[node]
   end
 
   def visit_string(node, local_scope)

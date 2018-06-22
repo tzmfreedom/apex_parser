@@ -10,11 +10,12 @@ Bundler.require
 parser = ApexCompiler.new
 
 interpreter = InterpreterVisitor.new
-class_node = parser.scan_str(File.read('./lib/sample.cls'))
-class_node.accept(interpreter)
-
+Dir['./lib/*.cls'].each do |filepath|
+  class_node = parser.scan_str(File.read(filepath))
+  class_node.accept(interpreter)
+end
 call_method_node = CallMethodNode.new(
-  receiver: class_node.name,
+  receiver: IdentifyNode.new(name: :Hoge),
   arguments: [],
   apex_method_name: IdentifyNode.new(name: :action)
 )
