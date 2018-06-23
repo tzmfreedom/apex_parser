@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'apex_parser/interpreter_visitor'
+require 'json'
 
 Bundler.require
 
@@ -14,6 +15,6 @@ end
 call_method_node = ApexParser::CallMethodNode.new(
   receiver: ApexParser::IdentifyNode.new(name: :Hoge),
   arguments: [],
-  apex_method_name: ApexParser::IdentifyNode.new(name: :action)
+  apex_method_name: :action
 )
 call_method_node.accept(interpreter, {})

@@ -4,6 +4,11 @@ public class Hoge {
 
     @aaa
     public static Integer action() {
+        // aaa
+        /* aaa aaa */
+        /*
+        hello
+        */
         List<Account> account = new List<Account>();
         System.debug(account);
         new Fuga().aaa();
@@ -34,8 +39,12 @@ public class Hoge {
         }
 
         System.debug('*** soql test ***');
-        a = [SELECT id FROM Account WHERE id = 1];
-        System.debug(a);
+        accounts = [SELECT id FROM Account WHERE id = 1];
+        System.debug(accounts);
+        for(Account a: accounts){
+            System.debug(a);
+        }
+        System.debug(accounts[0]);
 
         System.debug('*** case test ***');
         if (true) {

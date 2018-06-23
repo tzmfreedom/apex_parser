@@ -9,7 +9,7 @@ $(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)
 	bundle exec racc src/apex.racc.rb -v -o $(COMPILER_PATH)
 
 $(LEXOR_PATH): src/apex.rex.rb
-	bundle exec rex src/apex.rex.rb -o $(LEXOR_PATH)
+	bundle exec rex src/apex.rex.rb -i -o $(LEXOR_PATH)
 
 .PHONY: install
 install:

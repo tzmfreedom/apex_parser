@@ -1,3 +1,5 @@
+require 'apex_parser/data_loader'
+
 module ApexParser
   class InterpreterVisitor
     NULL = Object.new
@@ -27,9 +29,9 @@ module ApexParser
         when :assign
           if node.left.class == IdentifyNode
             local_scope[node.left.name] = node.right.accept(self, local_scope)
-          elsif
-          receiver_node = node.left.receiver.accept(self, local_scope)
-            receiver_node.apex_instance_variables[node.left.name.name] = node.right.accept(self, local_scope)
+          else
+            receiver_node = node.left.receiver.accept(self, local_scope)
+            receiver_node.apex_instance_variables[node.left.name] = node.right.accept(self, local_scope)
           end
         when :define
           if local_scope[node.left.name]
@@ -115,16 +117,16 @@ module ApexParser
     end
 
     def visit_new(node, local_scope)
-      apex_class_node = ApexClassTable[node.apex_class_name]
+      apex_class_node, generics_node = parse_type(node.apex_class_name)
       object_node = ApexObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
-
+      object_node.generics_node = generics_node
       # assign instance variables
       object_node.apex_instance_variables = HashWithUpperCasedSymbolicKey.new(apex_class_node.apex_instance_variables.map do |variable_name, variable_node|
         [variable_name, variable_node.accept(self, HashWithUpperCasedSymbolicKey.new)]
       end.to_h)
 
       # constructor
-      instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name.name]
+      instance_method_node = apex_class_node.apex_instance_methods[apex_class_node.name]
       return object_node unless instance_method_node
 
       # check constructor argument
@@ -138,19 +140,31 @@ module ApexParser
       object_node
     end
 
+    def parse_type(apex_class_name)
+      class_name, generics_type =
+        if m = /([a-zA-Z0-9]+)\<([a-zA-Z0-9]+)\>/.match(apex_class_name)
+          [m[1], m[2]]
+        elsif m = /([a-zA-Z0-9]+)\[\]/.match(apex_class_name)
+          [:Array, m[1]]
+        else
+          [apex_class_name, nil]
+        end
+      [ApexClassTable[class_name], generics_type ? ApexClassTable[generics_type] : nil]
+    end
+
     def visit_def_instance_method(node, local_scope)
     end
 
     def visit_def_instance_variable(node, local_scope)
       class_node = node.apex_class_node
-      expression = class_node.apex_instance_variables[node.name.name].expression
+      expression = class_node.apex_instance_variables[node.name].expression
       return unless expression
       expression.accept(self, local_scope)
     end
 
     def visit_instance_variable(node, local_scope)
       receiver = local_scope[node.receiver.name]
-      receiver.apex_instance_variables[node.name.name]
+      receiver.apex_instance_variables[node.name]
     end
 
     def visit_call_method(node, local_scope)
@@ -158,10 +172,10 @@ module ApexParser
       receiver_node = node.receiver.accept(self, local_scope)
       method =
         if receiver_node.is_a?(ApexClassNode)
-          receiver_node.apex_static_methods[node.apex_method_name.name]
+          receiver_node.apex_static_methods[node.apex_method_name]
         else
           class_node = receiver_node.apex_class_node
-          class_node.apex_instance_methods[node.apex_method_name.name]
+          class_node.apex_instance_methods[node.apex_method_name]
         end
       new_local_scope = check_argument(method, node.arguments, local_scope)
       return unless new_local_scope
@@ -195,8 +209,12 @@ module ApexParser
     end
 
     def visit_soql(node, local_scope)
-      NewNode.new(apex_class_name: IdentifyNode.new(name: :'List<Account>'), arguments: [])
-        .accept(self, local_scope)
+      @data_loader ||= ApexParser::DataLoader.new
+      records = @data_loader.call(:account)
+      list_node = NewNode.new(apex_class_name: :'List<Account>', arguments: [])
+                    .accept(self, local_scope)
+      list_node.apex_instance_variables[:records] = records
+      list_node
     end
 
     def check_argument(method, arguments, local_scope)
@@ -232,7 +250,7 @@ module ApexParser
     end
 
     def visit_identify(node, local_scope)
-      local_scope[node.name] || ApexClassTable[node]
+      local_scope[node.name] || ApexClassTable[node.name]
     end
 
     def visit_string(node, local_scope)

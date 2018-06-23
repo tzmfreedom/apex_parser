@@ -33,6 +33,7 @@ module ApexParser
 
     def initialize(args = {})
       super
+      @statements ||= []
       @apex_instance_methods = HashWithUpperCasedSymbolicKey.new
       @apex_static_methods = HashWithUpperCasedSymbolicKey.new
       @apex_static_variables = HashWithUpperCasedSymbolicKey.new
@@ -58,7 +59,7 @@ module ApexParser
 
     def add_to_class(klass)
       self.apex_class_name = klass.name
-      klass.apex_static_methods[name.name] = self
+      klass.apex_static_methods[name] = self
     end
 
     def accept(visitor)
@@ -76,7 +77,7 @@ module ApexParser
 
     def add_to_class(klass)
       self.apex_class_name = klass.name
-      klass.apex_instance_methods[name.name] = self
+      klass.apex_instance_methods[name] = self
     end
 
     def accept(visitor, local_scope)
@@ -88,7 +89,7 @@ module ApexParser
     attr_accessor :type, :name, :access_level, :expression
 
     def add_to_class(klass)
-      klass.apex_static_variables[name.name] = self
+      klass.apex_static_variables[name] = self
     end
 
     def accept(visitor)
@@ -109,7 +110,7 @@ module ApexParser
 
     def add_to_class(klass)
       self.apex_class_node = klass
-      klass.apex_instance_variables[name.name] = self
+      klass.apex_instance_variables[name] = self
     end
 
     def accept(visitor, local_scope)
@@ -194,14 +195,20 @@ module ApexParser
   end
 
   class ApexObjectNode < Base
-    attr_accessor :apex_class_node, :arguments, :apex_instance_variables
+    attr_accessor :apex_class_node, :arguments, :apex_instance_variables, :generics_node
 
     def accept(visitor, local_scope)
       visitor.visit_object(self, local_scope)
     end
 
     def value
-      "#<#{apex_class_node.name.name}:#{object_id}>"
+      "#<#{apex_class_node.name}#{generics_node ? "<#{generics_node.name}>" : nil}:#{object_id}>"
+    end
+  end
+
+  class CommentNode < SingleValueNode
+    def accept(visitor, local_scope)
+      nil
     end
   end
 
@@ -274,11 +281,11 @@ module ApexParser
 
     class << self
       def register(name, apex_class)
-        (@apex_classes ||= HashWithUpperCasedSymbolicKey.new)[name.name] = apex_class
+        (@apex_classes ||= HashWithUpperCasedSymbolicKey.new)[name] = apex_class
       end
 
       def [](name)
-        @apex_classes[name.name]
+        @apex_classes[name]
       end
     end
   end
@@ -319,6 +326,12 @@ module ApexParser
   class AnyObject; end
 
   class SObject
+    attr_accessor :attributes
+
+    def initialize(attributes = {})
+      @attributes = attributes
+    end
+
     def value
       inspect
     end

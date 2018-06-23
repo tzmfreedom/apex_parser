@@ -1,18 +1,16 @@
 class ApexParser::ApexCompiler
 macro
-  WORD [a-zA-Z][a-zA-Z0-9]+
+  WORD [a-zA-Z][a-zA-Z0-9]*
   BLANK  [\ \t]+
+  COMMENT [\s\S\t\n]+?
   REMIN \/\*
   REMOUT \*\/
 rule
       {BLANK}
       {REMIN}            { @state = :REM; [:REM_IN, [text, lineno]] }
 :REM  {REMOUT}           { @state = nil; [:REM_OUT, [text, lineno]] }
-:REM  (.+)(?={REMOUT})   { [:COMMENT, [text, lineno]] }
+:REM  ({COMMENT})(?={REMOUT})   { [:COMMENT, [text, lineno]] }
       \/\/.*\n           { [:COMMENT, [text, lineno]] }
-      \[                 { @state = :SOQL; [:SOQL_IN, [text, lineno]] }
-:SOQL \]                 { @state = nil; [:SOQL_OUT, [text, lineno]] }
-:SOQL ([^\]]+)(?=\])     { [:SOQL, [text, lineno]] }
       \[                 { [:LS_BRACE, [text, lineno]] }
       \]                 { [:RS_BRACE, [text, lineno]] }
       \{                 { [:LC_BRACE, [text, lineno]] }
@@ -21,6 +19,8 @@ rule
       \)                 { [:R_BRACE, [text, lineno]] }
       '[^']*'            { [:STRING, [text[1..-2], lineno]] }
       @\w+               { [:ANNOTATION, [text, lineno]] }
+      select             { [:SELECT, [text, lineno]] }
+      from               { [:FROM, [text, lineno]] }
       null               { [:NULL, [text, lineno]] }
       true               { [:TRUE, [text, lineno]] }
       false              { [:FALSE, [text, lineno]] }
@@ -60,6 +60,7 @@ rule
       \d+                { [:INTEGER, [text.to_i, lineno]] }
       {WORD}\<{WORD}\>   { [:IDENT, [text, lineno]] }
       {WORD}\[\]         { [:IDENT, [text, lineno]] }
+      {WORD}             { [:IDENT, [text, lineno]] }
       \n
       \+                 { [:ADD, [text, lineno]] }
       \-                 { [:SUB, [text, lineno]] }

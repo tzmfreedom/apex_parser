@@ -6,12 +6,13 @@ preclow
 
 token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
-  RETURN DOT STRING REMIN REMOUT COMMENT ANNOTATION INSERT DELETE
+  RETURN DOT STRING REM_IN REM_OUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
   INSTANCE_OF TRUE FALSE IF ELSE FOR WHILE COLON
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
-  SOQL SOQL_IN SOQL_OUT NULL CONTINUE BREAK
+  NULL CONTINUE BREAK SELECT FROM
+  LS_BRACE RS_BRACE
 
 rule
   class_or_trigger : class_def
@@ -25,7 +26,7 @@ rule
               result = ApexClassNode.new(
                 access_level: val[0],
                 sharing: val[2],
-                name: val[3],
+                name: val[3].name,
                 statements: val[5]
               )
             }
@@ -36,15 +37,18 @@ rule
              | constructor_def
              | instance_variable_def SEMICOLON
 
-  instance_variable_def : empty_or_annotations access_level ident ident { result = DefInstanceVariableNode.new(access_level: val[1], type: val[2], name: val[3]) }
+  instance_variable_def : empty_or_annotations access_level ident ident
+                        {
+                          result = DefInstanceVariableNode.new(access_level: val[1], type: val[2].name, name: val[3].name)
+                        }
                         | empty_or_annotations access_level ident ident ASSIGN expr
-                        { result = DefInstanceVariableNode.new(access_level: val[1], type: val[2], name: val[3], expression: val[5]) }
+                        { result = DefInstanceVariableNode.new(access_level: val[1], type: val[2].name, name: val[3].name, expression: val[5]) }
   constructor_def : empty_or_annotations access_level ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                   {
                     result = ApexDefInstanceMethodNode.new(
                       access_level: val[1],
                       return_type: :void,
-                      name: val[2],
+                      name: val[2].name,
                       arguments: val[4] || [],
                       statements: val[7]
                     )
@@ -53,8 +57,8 @@ rule
                       {
                         result = ApexDefInstanceMethodNode.new(
                           access_level: val[1],
-                          return_type: val[3],
-                          name: val[4],
+                          return_type: val[3].name,
+                          name: val[4].name,
                           arguments: val[6] || [],
                           statements: val[9]
                         )
@@ -63,8 +67,8 @@ rule
                       {
                         result = ApexDefInstanceMethodNode.new(
                           access_level: val[1],
-                          return_type: val[2],
-                          name: val[3],
+                          return_type: val[2].name,
+                          name: val[3].name,
                           arguments: val[5] || [],
                           statements: val[8]
                         )
@@ -73,8 +77,8 @@ rule
                     {
                       result = ApexStaticMethodNode.new(
                         access_level: val[1],
-                        return_type: val[4],
-                        name: val[5],
+                        return_type: val[4].name,
+                        name: val[5].name,
                         arguments: val[7] || [],
                         statements: val[10]
                       )
@@ -83,8 +87,8 @@ rule
                     {
                       result = ApexStaticMethodNode.new(
                         access_level: val[1],
-                        return_type: val[3],
-                        name: val[4],
+                        return_type: val[3].name,
+                        name: val[4].name,
                         arguments: val[6] || [],
                         statements: val[9]
                       )
@@ -107,6 +111,8 @@ rule
         | if_stmt
         | for_stmt
         | while_stmt
+        | COMMENT { result = CommentNode.new(val[0]) }
+        | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }
   loop_stmt  : expr
              | assigns
              | variable_def
@@ -130,23 +136,40 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
   assigns : assign
           | ident ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
           | instance_variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+          | expr LS_BRACE expr RS_BRACE ASSIGN assigns
+          { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[]=, arguments: [val[2], val[5]]) }
   assign : ident ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
          | instance_variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
+         | expr LS_BRACE expr RS_BRACE ASSIGN expr
+         { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[]=, arguments: [val[2], val[5]]) }
   expr  : number
         | new_expr
         | STRING { result = ApexStringNode.new(value(val, 0)) }
         | call_method
         | ident INSTANCE_OF ident
         | ident
+        | expr LS_BRACE expr RS_BRACE
+        { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[], arguments: [val[2]]) }
         | instance_variable
         | boolean
         | NULL { result = NullNode.new }
         | unary_operator ident { result = OperatorNode.new(type: val[0], left: val[1])}
         | ident unary_operator { result = OperatorNode.new(type: val[1], left: val[0])}
-        | SOQL_IN SOQL SOQL_OUT { result = SoqlNode.new(soql: value(val,1)) }
-new_expr : NEW ident L_BRACE empty_or_arguments R_BRACE
+        | LS_BRACE SELECT call_arguments FROM soql_options RS_BRACE
+        { result = SoqlNode.new(soql: val[4]) }
+soql_option : ident
+            | INTEGER
+            | STRING
+            | ASSIGN
+            | LESS_THAN
+            | LESS_THAN_EQUAL
+            | GREATER_THAN
+            | GREATER_THAN_EQUAL
+soql_options : soql_option
+             | soql_options soql_option
+new_expr : NEW ident L_BRACE empty_or_call_arguments R_BRACE
          {
-           result = NewNode.new(apex_class_name: val[1], arguments: val[3] && val[3])
+           result = NewNode.new(apex_class_name: val[1].name, arguments: val[3])
          }
   number : term
          | number ADD term { result = OperatorNode.new(type: :add, left: val[0], right: val[2]) }
@@ -168,11 +191,11 @@ new_expr : NEW ident L_BRACE empty_or_arguments R_BRACE
               {
                 result = CallMethodNode.new(
                   receiver: val[0],
-                  apex_method_name: val[2],
+                  apex_method_name: val[2].name,
                   arguments: val[4]
                 )
               }
-instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver: val[0], name: val[2]) }
+instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver: val[0], name: val[2].name) }
   empty_or_call_arguments :
                           | call_arguments
   call_arguments : call_argument { result = [val[0]] }
