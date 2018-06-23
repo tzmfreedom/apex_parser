@@ -14,4 +14,4 @@
 src/apex.l.rb
 src/apex.rb
 Gemfile.lock
-.output
+*.output

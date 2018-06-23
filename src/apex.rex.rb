@@ -1,5 +1,6 @@
 class ApexParser::ApexCompiler
 macro
+  WORD [a-zA-Z][a-zA-Z0-9]+
   BLANK  [\ \t]+
   REMIN \/\*
   REMOUT \*\/
@@ -57,7 +58,8 @@ rule
       instance_of        { [:INSTANCE_OF, [text, lineno]] }
       return             { [:RETURN, [text, lineno]] }
       \d+                { [:INTEGER, [text.to_i, lineno]] }
-      [a-zA-Z][a-zA-Z0-9\<\>\[\]]* { [:IDENT, [text, lineno]] }
+      {WORD}\<{WORD}\>   { [:IDENT, [text, lineno]] }
+      {WORD}\[\]         { [:IDENT, [text, lineno]] }
       \n
       \+                 { [:ADD, [text, lineno]] }
       \-                 { [:SUB, [text, lineno]] }

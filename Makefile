@@ -3,7 +3,7 @@ LEXOR_PATH := lib/apex_parser/apex_compiler.l.rb
 
 .PHONY: test
 test: $(COMPILER_PATH)
-	@time bundle exec ruby exe/rapx
+	@time bundle exec rapis
 
 $(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)
 	bundle exec racc src/apex.racc.rb -v -o $(COMPILER_PATH)

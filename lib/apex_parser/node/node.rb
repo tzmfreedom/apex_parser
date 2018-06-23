@@ -7,7 +7,7 @@ module ApexParser
     end
   end
 
-  class ApexNode
+  class Base
     attr_accessor :lineno
 
     def initialize(args = {})
@@ -26,7 +26,7 @@ module ApexParser
     end
   end
 
-  class ApexClassNode < ApexNode
+  class ApexClassNode < Base
     attr_accessor :access_level, :name, :statements,
                   :apex_instance_variables, :apex_instance_methods,
                   :apex_static_variables, :apex_static_methods
@@ -48,7 +48,7 @@ module ApexParser
     end
   end
 
-  class ApexStaticMethodNode < ApexNode
+  class ApexStaticMethodNode < Base
     attr_accessor :name, :access_level, :return_type,
                   :arguments, :statements, :apex_class_name
 
@@ -66,7 +66,7 @@ module ApexParser
     end
   end
 
-  class ApexDefInstanceMethodNode < ApexNode
+  class ApexDefInstanceMethodNode < Base
     attr_accessor :name, :access_level, :return_type,
                   :arguments, :statements, :apex_class_name
 
@@ -84,7 +84,7 @@ module ApexParser
     end
   end
 
-  class ApexStaticVariableNode < ApexNode
+  class ApexStaticVariableNode < Base
     attr_accessor :type, :name, :access_level, :expression
 
     def add_to_class(klass)
@@ -96,7 +96,7 @@ module ApexParser
     end
   end
 
-  class InstanceVariableNode < ApexNode
+  class InstanceVariableNode < Base
     attr_accessor :receiver, :name
 
     def accept(visitor, local_scope)
@@ -104,7 +104,7 @@ module ApexParser
     end
   end
 
-  class DefInstanceVariableNode < ApexNode
+  class DefInstanceVariableNode < Base
     attr_accessor :type, :name, :access_level, :expression, :apex_class_node
 
     def add_to_class(klass)
@@ -117,7 +117,7 @@ module ApexParser
     end
   end
 
-  class IfNode < ApexNode
+  class IfNode < Base
     attr_accessor :condition, :if_stmt, :else_stmt
 
     def accept(visitor, local_scope)
@@ -125,7 +125,7 @@ module ApexParser
     end
   end
 
-  class ArgumentNode < ApexNode
+  class ArgumentNode < Base
     attr_accessor :type, :name
 
     def initialize(*args)
@@ -149,7 +149,7 @@ module ApexParser
     end
   end
 
-  class ForNode < ApexNode
+  class ForNode < Base
     attr_accessor :init_stmt, :exit_condition, :increment_stmt, :statements
 
     def accept(visitor, local_scope)
@@ -157,7 +157,7 @@ module ApexParser
     end
   end
 
-  class WhileNode < ApexNode
+  class WhileNode < Base
     attr_accessor :condition_stmt, :statements
 
     def accept(visitor, local_scope)
@@ -165,7 +165,7 @@ module ApexParser
     end
   end
 
-  class ForEnumNode < ApexNode
+  class ForEnumNode < Base
     attr_accessor :type, :ident, :list, :statements
 
     def accept(visitor, local_scope)
@@ -173,7 +173,7 @@ module ApexParser
     end
   end
 
-  class IdentifyNode < ApexNode
+  class IdentifyNode < Base
     attr_accessor :name
 
     def accept(visitor, local_scope)
@@ -193,7 +193,7 @@ module ApexParser
     end
   end
 
-  class ApexObjectNode < ApexNode
+  class ApexObjectNode < Base
     attr_accessor :apex_class_node, :arguments, :apex_instance_variables
 
     def accept(visitor, local_scope)
@@ -205,7 +205,7 @@ module ApexParser
     end
   end
 
-  class NullNode < ApexNode
+  class NullNode < Base
     def initialize; end
 
     def accept(visitor, local_scope)
@@ -229,7 +229,7 @@ module ApexParser
     end
   end
 
-  class NewNode < ApexNode
+  class NewNode < Base
     attr_accessor :apex_class_name, :arguments
 
     def initialize(*args)
@@ -243,7 +243,7 @@ module ApexParser
     end
   end
 
-  class SoqlNode < ApexNode
+  class SoqlNode < Base
     attr_accessor :soql
 
     def accept(visitor, local_scope)
@@ -255,7 +255,7 @@ module ApexParser
     end
   end
 
-  class ReturnNode < ApexNode
+  class ReturnNode < Base
     attr_accessor :value, :expression
 
     def accept(visitor, local_scope)
@@ -263,10 +263,10 @@ module ApexParser
     end
   end
 
-  class BreakNode < ApexNode
+  class BreakNode < Base
   end
 
-  class ContinueNode < ApexNode
+  class ContinueNode < Base
   end
 
   class ApexClassTable
@@ -283,7 +283,7 @@ module ApexParser
     end
   end
 
-  class AnnotationNode < ApexNode
+  class AnnotationNode < Base
     attr_accessor :name
 
     def initialize(name)
@@ -295,7 +295,7 @@ module ApexParser
     end
   end
 
-  class CallMethodNode < ApexNode
+  class CallMethodNode < Base
     attr_accessor :receiver, :arguments, :apex_method_name
 
     def initialize(*args)
@@ -308,7 +308,7 @@ module ApexParser
     end
   end
 
-  class OperatorNode < ApexNode
+  class OperatorNode < Base
     attr_accessor :type, :left, :operator, :right
 
     def accept(visitor, local_scope)
