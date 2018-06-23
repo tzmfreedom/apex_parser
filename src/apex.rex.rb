@@ -1,10 +1,12 @@
 class ApexParser::ApexCompiler
 macro
-  WORD [a-zA-Z][a-zA-Z0-9]*
+  WORD [a-zA-Z][a-zA-Z0-9\_]*
   BLANK  [\ \t]+
-  COMMENT [\s\S\t\n]+?
+  COMMENT [\s\S\t]+?
   REMIN \/\*
   REMOUT \*\/
+  DELIM_BLANK (?=\s)
+  DELIM (?=[\(\s])
 rule
       {BLANK}
       {REMIN}            { @state = :REM; [:REM_IN, [text, lineno]] }
@@ -19,38 +21,38 @@ rule
       \)                 { [:R_BRACE, [text, lineno]] }
       '[^']*'            { [:STRING, [text[1..-2], lineno]] }
       @\w+               { [:ANNOTATION, [text, lineno]] }
-      select             { [:SELECT, [text, lineno]] }
-      from               { [:FROM, [text, lineno]] }
-      null               { [:NULL, [text, lineno]] }
-      true               { [:TRUE, [text, lineno]] }
-      false              { [:FALSE, [text, lineno]] }
-      for                { [:FOR, [text, lineno]] }
-      while              { [:WHILE, [text, lineno]] }
-      if                 { [:IF, [text, lineno]] }
-      else               { [:ELSE, [text, lineno]] }
-      insert             { [:INSERT, [text, lineno]] }
-      delete             { [:DELETE, [text, lineno]] }
-      undelete           { [:UNDELETE, [text, lineno]] }
-      update             { [:UPDATE, [text, lineno]] }
-      upsert             { [:UPSERT, [text, lineno]] }
-      before             { [:BEFORE, [text, lineno]] }
-      after              { [:AFTER, [text, lineno]] }
-      trigger            { [:TRIGGER, [text, lineno]] }
-      on                 { [:ON, [text, lineno]] }
-      with               { [:WITH, [text, lineno]] }
-      without            { [:WITHOUT, [text, lineno]] }
-      sharing            { [:SHARING, [text, lineno]] }
-      class              { [:CLASS, [text, lineno]] }
-      public             { [:PUBLIC, [text, lineno]] }
-      private            { [:PRIVATE, [text, lineno]] }
-      protected          { [:PROTECTED, [text, lineno]] }
-      global             { [:GLOBAL, [text, lineno]] }
-      override           { [:OVERRIDE, [text, lineno]] }
-      static             { [:STATIC, [text, lineno]] }
-      final              { [:FINAL, [text, lineno]] }
-      new                { [:NEW, [text, lineno]] }
-      get                { [:GET, [text, lineno]] }
-      set                { [:SET, [text, lineno]] }
+      select{DELIM_BLANK} { [:SELECT, [text, lineno]] }
+      from{DELIM_BLANK}               { [:FROM, [text, lineno]] }
+      null(?=[\s;\(\)])               { [:NULL, [text, lineno]] }
+      true(?=[\s;\(\)])               { [:TRUE, [text, lineno]] }
+      false(?=[\s;\(\)])              { [:FALSE, [text, lineno]] }
+      for{DELIM}        { [:FOR, [text, lineno]] }
+      while{DELIM}              { [:WHILE, [text, lineno]] }
+      if{DELIM}                 { [:IF, [text, lineno]] }
+      else{DELIM}               { [:ELSE, [text, lineno]] }
+      insert{DELIM_BLANK}             { [:INSERT, [text, lineno]] }
+      delete{DELIM_BLANK}             { [:DELETE, [text, lineno]] }
+      undelete{DELIM_BLANK}           { [:UNDELETE, [text, lineno]] }
+      update{DELIM_BLANK}             { [:UPDATE, [text, lineno]] }
+      upsert{DELIM_BLANK}             { [:UPSERT, [text, lineno]] }
+      before{DELIM_BLANK}             { [:BEFORE, [text, lineno]] }
+      after{DELIM_BLANK}              { [:AFTER, [text, lineno]] }
+      trigger{DELIM_BLANK}            { [:TRIGGER, [text, lineno]] }
+      on{DELIM_BLANK}                 { [:ON, [text, lineno]] }
+      with{DELIM_BLANK}               { [:WITH, [text, lineno]] }
+      without{DELIM_BLANK}            { [:WITHOUT, [text, lineno]] }
+      sharing{DELIM_BLANK}            { [:SHARING, [text, lineno]] }
+      class{DELIM_BLANK}              { [:CLASS, [text, lineno]] }
+      public{DELIM_BLANK}             { [:PUBLIC, [text, lineno]] }
+      private{DELIM_BLANK}            { [:PRIVATE, [text, lineno]] }
+      protected{DELIM_BLANK}          { [:PROTECTED, [text, lineno]] }
+      global{DELIM_BLANK}            { [:GLOBAL, [text, lineno]] }
+      override{DELIM_BLANK}          { [:OVERRIDE, [text, lineno]] }
+      static{DELIM_BLANK}           { [:STATIC, [text, lineno]] }
+      final{DELIM_BLANK}            { [:FINAL, [text, lineno]] }
+      new{DELIM_BLANK}              { [:NEW, [text, lineno]] }
+      get[;\s]           { [:GET, [text, lineno]] }
+      set[;\s]           { [:SET, [text, lineno]] }
       extends            { [:EXTENDS, [text, lineno]] }
       implements         { [:IMPLEMENTS, [text, lineno]] }
       abstract           { [:ABSTRACT, [text, lineno]] }

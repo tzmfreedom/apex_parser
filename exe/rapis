@@ -9,8 +9,8 @@ parser = ApexParser::ApexCompiler.new
 
 interpreter = ApexParser::InterpreterVisitor.new
 Dir['./lib/*.cls'].each do |filepath|
-  class_node = parser.scan_str(File.read(filepath))
-  class_node.accept(interpreter)
+  root_stmts = parser.scan_str(File.read(filepath))
+  root_stmts.each { |stmt| stmt.accept(interpreter) }
 end
 call_method_node = ApexParser::CallMethodNode.new(
   receiver: ApexParser::IdentifyNode.new(name: :Hoge),

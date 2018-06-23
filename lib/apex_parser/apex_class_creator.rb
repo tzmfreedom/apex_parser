@@ -13,8 +13,9 @@ module ApexParser
     end
 
     def add_instance_method(name, access_level, return_type, arguments, &block)
-      method = ApexDefInstanceMethodNode.new(
+      method = ApexDefMethodNode.new(
         name: name,
+        modifiers: [],
         access_level: access_level,
         return_type: return_type,
         arguments: arguments.map { |argument| ArgumentNode.new(type: argument[0], name: argument[1]) },
@@ -32,8 +33,9 @@ module ApexParser
     end
 
     def add_static_method(name, access_level, return_type, arguments, &block)
-      method = ApexStaticMethodNode.new(
+      method = ApexDefMethodNode.new(
         name: name,
+        modifiers: ['static'],
         access_level: access_level,
         return_type: return_type,
         arguments: arguments.map { |argument| ArgumentNode.new(type: argument[0], name: argument[1]) },

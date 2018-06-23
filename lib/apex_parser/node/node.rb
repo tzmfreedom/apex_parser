@@ -51,9 +51,10 @@ module ApexParser
     end
   end
 
-  class ApexStaticMethodNode < Base
+  class ApexDefMethodNode < Base
     attr_accessor :name, :access_level, :return_type,
-                  :arguments, :statements, :apex_class_name
+                  :arguments, :statements, :apex_class_name,
+                  :modifiers
 
     def native?
       false
@@ -61,25 +62,11 @@ module ApexParser
 
     def add_to_class(klass)
       self.apex_class_name = klass.name
-      klass.apex_static_methods[name] = self
-    end
-
-    def accept(visitor)
-      visitor.visit_class_method(self)
-    end
-  end
-
-  class ApexDefInstanceMethodNode < Base
-    attr_accessor :name, :access_level, :return_type,
-                  :arguments, :statements, :apex_class_name
-
-    def native?
-      false
-    end
-
-    def add_to_class(klass)
-      self.apex_class_name = klass.name
-      klass.apex_instance_methods[name] = self
+      if modifiers && modifiers.include?('static')
+        klass.apex_static_methods[name] = self
+      else
+        klass.apex_instance_methods[name] = self
+      end
     end
 
     def accept(visitor, local_scope)
@@ -135,7 +122,7 @@ module ApexParser
       super
 
       self.type =
-        case type
+        case type.to_sym
           when :Integer
             ApexIntegerNode
           when :Double
@@ -209,6 +196,8 @@ module ApexParser
   end
 
   class CommentNode < SingleValueNode
+    def add_to_class(klass); end
+
     def accept(visitor, local_scope)
       nil
     end

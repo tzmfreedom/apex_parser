@@ -4,11 +4,10 @@ public class Hoge extends HogeSuper{
 
     @aaa
     public static Integer action() {
-        // aaa
-        /* aaa aaa */
-        /*
-        hello
-        */
+        AWSClient client = new AWSClient('a', 'b', 'c');
+        System.debug(client.getAccessKeyId());
+        System.debug(client.getAccessKeySecret());
+        System.debug(client.region);
         List<Account> account = new List<Account>();
         System.debug(account);
         new Fuga().aaa();

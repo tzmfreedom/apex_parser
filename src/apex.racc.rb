@@ -15,21 +15,25 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   LS_BRACE RS_BRACE
 
 rule
+  root_stmts : class_or_trigger { result = [val[0]] }
+             | root_stmts class_or_trigger { val[0].push(val[1]) }
   class_or_trigger : class_def
                    | trigger_def
+                   | comment
   trigger_def : TRIGGER ident ON ident L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
               {
                 result = [:trigger, val[1], val[3], val[7]]
               }
-  class_def : access_level CLASS sharing ident empty_or_extends empty_or_implements LC_BRACE class_stmts RC_BRACE
+  class_def : access_level sharing empty_or_modifiers CLASS ident empty_or_extends empty_or_implements LC_BRACE class_stmts RC_BRACE
             {
               result = ApexClassNode.new(
                 access_level: val[0],
-                sharing: val[2],
-                name: val[3].name,
-                statements: val[7],
-                apex_super_class: val[4],
-                implements: val[5]
+                sharing: val[1],
+                modifiers: val[2],
+                name: val[4].name,
+                statements: val[8],
+                apex_super_class: val[5],
+                implements: val[6]
               )
             }
   empty_or_extends :
@@ -40,73 +44,53 @@ rule
              | implements COMMA ident { result = val[0].push(val[1]) }
   class_stmts : class_stmt { result = [val[0]] }
               | class_stmts class_stmt { result = val[0].push(val[1]) }
-  class_stmt : instance_method_def
-             | static_method_def
+  class_stmt : method_def
              | constructor_def
-             | instance_variable_def SEMICOLON
+             | instance_variable_def
              | comment
 
-  instance_variable_def : empty_or_annotations access_level ident ident
+  instance_variable_def : empty_or_annotations access_level empty_or_modifiers ident ident SEMICOLON
                         {
-                          result = DefInstanceVariableNode.new(access_level: val[1], type: val[2].name, name: val[3].name)
+                          result = DefInstanceVariableNode.new(access_level: val[1], modifiers: val[2], type: val[3].name, name: val[4].name)
                         }
-                        | empty_or_annotations access_level ident ident ASSIGN expr
-                        { result = DefInstanceVariableNode.new(access_level: val[1], type: val[2].name, name: val[3].name, expression: val[5]) }
-  constructor_def : empty_or_annotations access_level ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+                        | empty_or_annotations access_level empty_or_modifiers ident ident ASSIGN expr SEMICOLON
+                        { result = DefInstanceVariableNode.new(access_level: val[1], modifiers: val[2], type: val[3].name, name: val[4].name, expression: val[6]) }
+                        | empty_or_annotations access_level empty_or_modifiers ident ident LC_BRACE getter_setter RC_BRACE
+                        { result = DefInstanceVariableNode.new(access_level: val[1], modifiers: val[2], type: val[3].name, name: val[4].name, expression: val[6]) }
+  getter_setter : getter setter
+                | setter getter
+  getter : GET
+  setter : SET
+
+  constructor_def : empty_or_annotations access_level empty_or_modifiers ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
                   {
-                    result = ApexDefInstanceMethodNode.new(
+                    result = ApexDefMethodNode.new(
                       access_level: val[1],
                       return_type: :void,
-                      name: val[2].name,
-                      arguments: val[4] || [],
-                      statements: val[7]
+                      modifiers: val[2],
+                      name: val[3].name,
+                      arguments: val[5] || [],
+                      statements: val[8]
                     )
                   }
-  instance_method_def : empty_or_annotations access_level modifier ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-                      {
-                        result = ApexDefInstanceMethodNode.new(
-                          access_level: val[1],
-                          return_type: val[3].name,
-                          name: val[4].name,
-                          arguments: val[6] || [],
-                          statements: val[9]
-                        )
-                      }
-                      | empty_or_annotations access_level ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-                      {
-                        result = ApexDefInstanceMethodNode.new(
-                          access_level: val[1],
-                          return_type: val[2].name,
-                          name: val[3].name,
-                          arguments: val[5] || [],
-                          statements: val[8]
-                        )
-                      }
-  static_method_def : empty_or_annotations access_level STATIC modifier ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-                    {
-                      result = ApexStaticMethodNode.new(
-                        access_level: val[1],
-                        return_type: val[4].name,
-                        name: val[5].name,
-                        arguments: val[7] || [],
-                        statements: val[10]
-                      )
-                    }
-                    | empty_or_annotations access_level STATIC ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-                    {
-                      result = ApexStaticMethodNode.new(
-                        access_level: val[1],
-                        return_type: val[3].name,
-                        name: val[4].name,
-                        arguments: val[6] || [],
-                        statements: val[9]
-                      )
-                    }
+  method_def : empty_or_annotations access_level empty_or_modifiers ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+             {
+               result = ApexDefMethodNode.new(
+                 access_level: val[1],
+                 return_type: val[3].name,
+                 modifiers: val[2],
+                 name: val[4].name,
+                 arguments: val[6] || [],
+                 statements: val[9]
+               )
+             }
   empty_or_arguments :
                      | arguments
   arguments : argument { result = [val[0]] }
             | arguments COMMA argument { result = val[0].push(val[2]) }
-  argument : ident ident { result = ArgumentNode.new(type: val[0], name: val[1]) }
+  argument : ident ident { result = ArgumentNode.new(type: val[0].name, name: val[1].name) }
+
+
 
   stmts : stmt { result = [val[0]] }
         | stmts stmt { result = val[0].push(val[1]) }
@@ -215,9 +199,14 @@ new_expr : NEW ident L_BRACE empty_or_call_arguments R_BRACE
   access_level : PUBLIC
                | PRIVATE
                | PROTECTED
+empty_or_modifiers :
+                   | modifiers
+  modifiers : modifier { result = [value(val, 0)] }
+            | modifiers modifier { result = val[0].push(val[1]) }
   modifier : ABSTRACT
            | FINAL
            | GLOBAL
+           | STATIC
   sharing :
           | WITH SHARING { result = :with_sharing }
           | WITHOUT SHARING { result = :without_sharing }

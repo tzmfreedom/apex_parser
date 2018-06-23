@@ -140,6 +140,7 @@ module ApexParser
         method_node = class_node.apex_static_methods[method_name]
         return method_node if method_node
 
+        break unless class_node.apex_super_class
         class_node = class_node.apex_super_class.accept(self, {})
       end
 
@@ -170,7 +171,6 @@ module ApexParser
       return unless new_local_scope
 
       # execute constructor argument
-      new_local_scope = HashWithUpperCasedSymbolicKey.new
       new_local_scope[:this] = object_node
       execute_statement(instance_method_node, new_local_scope, false)
       object_node
@@ -212,6 +212,11 @@ module ApexParser
         else
           search_instance_method(receiver_node.apex_class_node, node.apex_method_name)
         end
+      unless method
+        puts "No Method Error!!"
+        binding.pry
+        return nil
+      end
       new_local_scope = check_argument(method, node.arguments, local_scope)
       return unless new_local_scope
 
