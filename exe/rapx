@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require 'apex_parser/interpreter_visitor'
+
+Bundler.require
+
+parser = ApexParser::ApexCompiler.new
+
+interpreter = ApexParser::InterpreterVisitor.new
+Dir['./lib/*.cls'].each do |filepath|
+  class_node = parser.scan_str(File.read(filepath))
+  class_node.accept(interpreter)
+end
+call_method_node = ApexParser::CallMethodNode.new(
+  receiver: ApexParser::IdentifyNode.new(name: :Hoge),
+  arguments: [],
+  apex_method_name: ApexParser::IdentifyNode.new(name: :action)
+)
+call_method_node.accept(interpreter, {})

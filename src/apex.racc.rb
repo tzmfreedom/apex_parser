@@ -1,4 +1,4 @@
-class ApexCompiler
+class ApexParser::ApexCompiler
 
 prechigh
   right ASSIGN
@@ -134,7 +134,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
          | instance_variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
   expr  : number
         | new_expr
-        | STRING { result = ApexStringNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
+        | STRING { result = ApexStringNode.new(value(val, 0)) }
         | call_method
         | ident INSTANCE_OF ident
         | ident
@@ -157,7 +157,7 @@ new_expr : NEW ident L_BRACE empty_or_arguments R_BRACE
   break_stmt : BREAK { result = BreakNode.new }
   continue_stmt : CONTINUE { result = ContinueNode.new }
   return_stmt : RETURN expr { result = ReturnNode.new(expression: val[1]) }
-  primary_expr : INTEGER { result = ApexIntegerNode.new(value: value(val,0)) }
+  primary_expr : INTEGER { result = ApexIntegerNode.new(value(val,0)) }
                | DOUBLE
   variable_def : ident ident { result = OperatorNode.new(type: :define, left: val[1]) }
                | ident ident ASSIGN def_assigns
@@ -209,8 +209,14 @@ end
 
 ---- header
 
-require './lib/apex.l'
-require './lib/node'
+require 'apex_parser/apex_compiler.l'
+require 'apex_parser/util/hash_with_upper_cased_symbolic_key'
+require 'apex_parser/node/node'
+require 'apex_parser/apex_class_creator'
+
+Dir[File.expand_path('./runtime/**/*.rb', __dir__)].each do |f|
+  require f
+end
 
 ---- inner
 

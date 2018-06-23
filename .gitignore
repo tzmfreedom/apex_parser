@@ -11,7 +11,7 @@
 .rspec_status
 /vendor/bundle
 /.idea
-lib/apex.l.rb
-lib/apex.rb
+src/apex.l.rb
+src/apex.rb
 Gemfile.lock
 .output

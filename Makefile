@@ -1,12 +1,15 @@
+COMPILER_PATH := lib/apex_parser/apex_compiler.rb
+LEXOR_PATH := lib/apex_parser/apex_compiler.l.rb
+
 .PHONY: test
-test: lib/apex.rb
-	@time bundle exec ruby ./lib/run.rb
+test: $(COMPILER_PATH)
+	@time bundle exec ruby exe/rapx
 
-lib/apex.rb: lib/apex.racc.rb lib/apex.l.rb
-	bundle exec racc ./lib/apex.racc.rb -v -o ./lib/apex.rb
+$(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)
+	bundle exec racc src/apex.racc.rb -v -o $(COMPILER_PATH)
 
-lib/apex.l.rb: lib/apex.rex.rb
-	bundle exec rex ./lib/apex.rex.rb -o ./lib/apex.l.rb
+$(LEXOR_PATH): src/apex.rex.rb
+	bundle exec rex src/apex.rex.rb -o $(LEXOR_PATH)
 
 .PHONY: install
 install:

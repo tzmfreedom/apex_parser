@@ -4,6 +4,8 @@ public class Hoge {
 
     @aaa
     public static Integer action() {
+        List<Account> account = new List<Account>();
+        System.debug(account);
         new Fuga().aaa();
         System.debug(new Fuga());
         System.debug('*** variable test assign***');
@@ -23,7 +25,9 @@ public class Hoge {
         System.debug(a.a);
 
         System.debug('*** list test ***');
-        List accounts = new List();
+        List<Account> accounts = new List<Account>();
+        accounts.add(1);
+        accounts.add(100);
         System.debug(accounts);
         for(Account acc : accounts){
             System.debug(acc);

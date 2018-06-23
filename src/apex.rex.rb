@@ -1,4 +1,4 @@
-class ApexCompiler
+class ApexParser::ApexCompiler
 macro
   BLANK  [\ \t]+
   REMIN \/\*
@@ -57,7 +57,7 @@ rule
       instance_of        { [:INSTANCE_OF, [text, lineno]] }
       return             { [:RETURN, [text, lineno]] }
       \d+                { [:INTEGER, [text.to_i, lineno]] }
-      [a-zA-Z][a-zA-Z0-9]* { [:IDENT, [text, lineno]] }
+      [a-zA-Z][a-zA-Z0-9\<\>\[\]]* { [:IDENT, [text, lineno]] }
       \n
       \+                 { [:ADD, [text, lineno]] }
       \-                 { [:SUB, [text, lineno]] }
