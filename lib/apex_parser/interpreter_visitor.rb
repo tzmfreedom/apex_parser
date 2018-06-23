@@ -51,6 +51,14 @@ module ApexParser
           ApexIntegerNode.new(node.left.accept(self, local_scope).value / node.right.accept(self, local_scope).value)
         when :mul
           ApexIntegerNode.new(node.left.accept(self, local_scope).value * node.right.accept(self, local_scope).value)
+        when :!=
+          BooleanNode.new(node.left.accept(self, local_scope).value != node.right.accept(self, local_scope).value)
+        when :==
+          BooleanNode.new(node.left.accept(self, local_scope).value == node.right.accept(self, local_scope).value)
+        when :<=
+          BooleanNode.new(node.left.accept(self, local_scope).value <= node.right.accept(self, local_scope).value)
+        when :>=
+          BooleanNode.new(node.left.accept(self, local_scope).value >= node.right.accept(self, local_scope).value)
         when :<
           BooleanNode.new(node.left.accept(self, local_scope).value < node.right.accept(self, local_scope).value)
         when :>
@@ -89,8 +97,8 @@ module ApexParser
     def visit_forenum(node, local_scope)
       new_local_scope = local_scope.dup
       list_node = new_local_scope[node.list.name]
-      next_method = list_node.apex_class_node.apex_instance_methods[:next]
-      has_next_method= list_node.apex_class_node.apex_instance_methods[:has_next]
+      next_method = search_instance_method(list_node.apex_class_node, :next)
+      has_next_method= search_instance_method(list_node.apex_class_node, :has_next)
 
       loop do
         has_next_local_scope = HashWithUpperCasedSymbolicKey.new({ this: list_node })
@@ -110,6 +118,34 @@ module ApexParser
           when ContinueNode
         end
       end
+    end
+
+    def search_instance_method(apex_class_node, method_name)
+      class_node = apex_class_node
+      while class_node
+        method_node = class_node.apex_instance_methods[method_name]
+        return method_node if method_node
+
+        class_node = class_node.apex_super_class.accept(self, {})
+      end
+
+      # TODO: Error Handling
+      puts 'ERROR : NO METHOD ERROR'
+      nil
+    end
+
+    def search_static_method(apex_class_node, method_name)
+      class_node = apex_class_node
+      while class_node
+        method_node = class_node.apex_static_methods[method_name]
+        return method_node if method_node
+
+        class_node = class_node.apex_super_class.accept(self, {})
+      end
+
+      # TODO: Error Handling
+      puts 'ERROR : NO METHOD ERROR'
+      nil
     end
 
     def visit_class(node)
@@ -172,10 +208,9 @@ module ApexParser
       receiver_node = node.receiver.accept(self, local_scope)
       method =
         if receiver_node.is_a?(ApexClassNode)
-          receiver_node.apex_static_methods[node.apex_method_name]
+          search_static_method(receiver_node, node.apex_method_name)
         else
-          class_node = receiver_node.apex_class_node
-          class_node.apex_instance_methods[node.apex_method_name]
+          search_instance_method(receiver_node.apex_class_node, node.apex_method_name)
         end
       new_local_scope = check_argument(method, node.arguments, local_scope)
       return unless new_local_scope
@@ -224,7 +259,7 @@ module ApexParser
       # Check Argument
       if evaluated_arguments.size !=  method.arguments.size
         # TODO: Error Handling
-        puts "Error!!"
+        puts "Argument Length Error!! #{evaluated_arguments.size} != #{method.arguments.size}"
         return
       end
 
@@ -232,7 +267,7 @@ module ApexParser
       evaluated_arguments.each_with_index do |evaluated_argument, idx|
         if method.arguments[idx].type != AnyObject && evaluated_argument.class != method.arguments[idx].type
           # TODO: Error Handling
-          puts "Error!!"
+          puts "Argument Type Error!! #{evaluated_argument.class} != #{method.arguments[idx].type}"
           return
         end
         variable_name = method.arguments[idx].name

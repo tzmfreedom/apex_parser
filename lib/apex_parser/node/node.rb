@@ -28,12 +28,14 @@ module ApexParser
 
   class ApexClassNode < Base
     attr_accessor :access_level, :name, :statements,
+                  :apex_super_class, :implements,
                   :apex_instance_variables, :apex_instance_methods,
                   :apex_static_variables, :apex_static_methods
 
     def initialize(args = {})
       super
       @statements ||= []
+      @implements ||= []
       @apex_instance_methods = HashWithUpperCasedSymbolicKey.new
       @apex_static_methods = HashWithUpperCasedSymbolicKey.new
       @apex_static_variables = HashWithUpperCasedSymbolicKey.new
@@ -139,7 +141,7 @@ module ApexParser
           when :Double
             ApexDoubleNode
           when :Boolean
-            ApexBooleanNode
+            BooleanNode
           when :String
             ApexStringNode
           when :Object

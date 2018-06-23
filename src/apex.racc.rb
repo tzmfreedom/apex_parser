@@ -21,21 +21,30 @@ rule
               {
                 result = [:trigger, val[1], val[3], val[7]]
               }
-  class_def : access_level CLASS sharing ident LC_BRACE class_stmts RC_BRACE
+  class_def : access_level CLASS sharing ident empty_or_extends empty_or_implements LC_BRACE class_stmts RC_BRACE
             {
               result = ApexClassNode.new(
                 access_level: val[0],
                 sharing: val[2],
                 name: val[3].name,
-                statements: val[5]
+                statements: val[7],
+                apex_super_class: val[4],
+                implements: val[5]
               )
             }
+  empty_or_extends :
+                   | EXTENDS ident { result = val[1] }
+  empty_or_implements :
+                      | IMPLEMENTS implements { result = val[1] }
+  implements : ident { result = [val[0]] }
+             | implements COMMA ident { result = val[0].push(val[1]) }
   class_stmts : class_stmt { result = [val[0]] }
               | class_stmts class_stmt { result = val[0].push(val[1]) }
   class_stmt : instance_method_def
              | static_method_def
              | constructor_def
              | instance_variable_def SEMICOLON
+             | comment
 
   instance_variable_def : empty_or_annotations access_level ident ident
                         {
@@ -107,16 +116,17 @@ rule
         | break_stmt SEMICOLON
         | continue_stmt SEMICOLON
         | variable_def SEMICOLON
-        | boolean_stmt SEMICOLON
+        | boolean_expr SEMICOLON
         | if_stmt
         | for_stmt
         | while_stmt
-        | COMMENT { result = CommentNode.new(val[0]) }
-        | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }
+        | comment
+  comment : COMMENT { result = CommentNode.new(val[0]) }
+          | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }
   loop_stmt  : expr
              | assigns
              | variable_def
-             | boolean_stmt
+             | boolean_expr
   if_stmt : IF L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE else_stmt_or_empty
           {
             result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
@@ -201,7 +211,7 @@ new_expr : NEW ident L_BRACE empty_or_call_arguments R_BRACE
   call_arguments : call_argument { result = [val[0]] }
                  | call_arguments COMMA call_argument { result = val[0].push(val[2]) }
   call_argument : expr
-
+                | boolean_expr
   access_level : PUBLIC
                | PRIVATE
                | PROTECTED
@@ -213,7 +223,7 @@ new_expr : NEW ident L_BRACE empty_or_call_arguments R_BRACE
           | WITHOUT SHARING { result = :without_sharing }
   boolean : TRUE { result = BooleanNode.new(true) }
           | FALSE { result = BooleanNode.new(false) }
-  boolean_stmt : expr comparator expr { result = OperatorNode.new(type: value(val, 1), left: val[0], right: val[2])}
+  boolean_expr: expr comparator expr { result = OperatorNode.new(type: value(val, 1), left: val[0], right: val[2])}
   comparator : LESS_THAN
              | LESS_THAN_EQUAL
              | GREATER_THAN

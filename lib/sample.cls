@@ -1,4 +1,4 @@
-public class Hoge {
+public class Hoge extends HogeSuper{
     public Integer a;
     public Integer b = 1;
 
@@ -28,6 +28,7 @@ public class Hoge {
         System.debug(a.a);
         a.a = 100;
         System.debug(a.a);
+        a.aaa();
 
         System.debug('*** list test ***');
         List<Account> accounts = new List<Account>();
@@ -74,6 +75,9 @@ public class Hoge {
         }
         System.debug('*** add/sub/mul/div ***');
         System.debug(1+4*5);
+        System.assert(1 == 1, 'hoge');
+        System.assertEquals(1, 1, 'hoge');
+        System.assertEquals(1, 1, 'hoge');
         return null;
     }
 
