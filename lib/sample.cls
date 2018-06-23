@@ -45,6 +45,14 @@ public class Hoge {
             System.debug(a);
         }
         System.debug(accounts[0]);
+        accounts[0] = new Account();
+        System.debug(accounts[0]);
+
+        Map<String> m = new Map<String>();
+        m.put('hoge', 'fuga');
+        System.debug(m.get('hoge'));
+        m.put('hoge', 'hello');
+        System.debug(m.get('hoge'));
 
         System.debug('*** case test ***');
         if (true) {

@@ -142,6 +142,7 @@ else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
          | instance_variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
          | expr LS_BRACE expr RS_BRACE ASSIGN expr
          { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[]=, arguments: [val[2], val[5]]) }
+instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver: val[0], name: val[2].name) }
   expr  : number
         | new_expr
         | STRING { result = ApexStringNode.new(value(val, 0)) }
@@ -195,7 +196,6 @@ new_expr : NEW ident L_BRACE empty_or_call_arguments R_BRACE
                   arguments: val[4]
                 )
               }
-instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver: val[0], name: val[2].name) }
   empty_or_call_arguments :
                           | call_arguments
   call_arguments : call_argument { result = [val[0]] }
@@ -228,6 +228,8 @@ instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver:
   unary_operator: ADD ADD { result = :plus_plus }
                 | SUB SUB { resutl = :minus_minus }
   ident : IDENT { result = IdentifyNode.new(name: value(val, 0)) }
+        | GET { result = IdentifyNode.new(name: 'get') }
+        | SET { result = IdentifyNode.new(name: 'set') }
 end
 
 ---- header
