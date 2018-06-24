@@ -1,10 +1,6 @@
 class ApexParser::ApexCompiler
 
-prechigh
-  right ASSIGN
-preclow
-
-token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
+token INTEGER IDENT ASSIGN SEMICOLON MUL DIV MOD ADD SUB DOUBLE
   CLASS PUBLIC PRIVATE PROTECTED GLOBAL LC_BRACE RC_BRACE L_BRACE R_BRACE COMMA
   RETURN DOT STRING REM_IN REM_OUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
@@ -12,147 +8,244 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV ADD SUB DOUBLE
   INSTANCE_OF TRUE FALSE IF ELSE FOR WHILE COLON
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
   NULL CONTINUE BREAK SELECT FROM
-  LS_BRACE RS_BRACE
+  LS_BRACE RS_BRACE TRY CATCH INCR DECR
+  LEFT_SHIFT RIGHT_SHIFT
+  AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION
 
 rule
-  root_stmts : class_or_trigger { result = [val[0]] }
-             | root_stmts class_or_trigger { val[0].push(val[1]) }
-  class_or_trigger : class_def
-                   | trigger_def
+  root_statements : class_or_trigger { result = [val[0]] }
+                  | root_statements class_or_trigger { val[0].push(val[1]) }
+  class_or_trigger : class_declaration
+                   | trigger_declaration
                    | comment
-  trigger_def : TRIGGER ident ON ident L_BRACE R_BRACE LC_BRACE stmts RC_BRACE
-              {
-                result = [:trigger, val[1], val[3], val[7]]
-              }
-  class_def : access_level sharing empty_or_modifiers CLASS ident empty_or_extends empty_or_implements LC_BRACE class_stmts RC_BRACE
-            {
-              result = ApexClassNode.new(
-                access_level: val[0],
-                sharing: val[1],
-                modifiers: val[2],
-                name: val[4].name,
-                statements: val[8],
-                apex_super_class: val[5],
-                implements: val[6]
-              )
-            }
-  empty_or_extends :
-                   | EXTENDS ident { result = val[1] }
-  empty_or_implements :
-                      | IMPLEMENTS implements { result = val[1] }
-  implements : ident { result = [val[0]] }
-             | implements COMMA ident { result = val[0].push(val[1]) }
-  class_stmts : class_stmt { result = [val[0]] }
-              | class_stmts class_stmt { result = val[0].push(val[1]) }
-  class_stmt : method_def
-             | constructor_def
-             | instance_variable_def
-             | comment
+  # Class Declaration
 
-  instance_variable_def : empty_or_annotations access_level empty_or_modifiers ident ident SEMICOLON
-                        {
-                          result = DefInstanceVariableNode.new(access_level: val[1], modifiers: val[2], type: val[3].name, name: val[4].name)
-                        }
-                        | empty_or_annotations access_level empty_or_modifiers ident ident ASSIGN expr SEMICOLON
-                        { result = DefInstanceVariableNode.new(access_level: val[1], modifiers: val[2], type: val[3].name, name: val[4].name, expression: val[6]) }
-                        | empty_or_annotations access_level empty_or_modifiers ident ident LC_BRACE getter_setter RC_BRACE
-                        { result = DefInstanceVariableNode.new(access_level: val[1], modifiers: val[2], type: val[3].name, name: val[4].name, expression: val[6]) }
-  getter_setter : getter setter
-                | setter getter
-  getter : GET
-  setter : SET
-
-  constructor_def : empty_or_annotations access_level empty_or_modifiers ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
+class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_implements LC_BRACE class_statements RC_BRACE
                   {
-                    result = ApexDefMethodNode.new(
-                      access_level: val[1],
-                      return_type: :void,
-                      modifiers: val[2],
-                      name: val[3].name,
-                      arguments: val[5] || [],
-                      statements: val[8]
+                    result = ApexClassNode.new(
+                      modifiers: val[0],
+                      name: value(val, 2),
+                      statements: val[6],
+                      apex_super_class: val[3],
+                      implements: val[4],
+                      lineno: get_lineno(val, 2)
                     )
                   }
-  method_def : empty_or_annotations access_level empty_or_modifiers ident ident L_BRACE empty_or_arguments R_BRACE LC_BRACE stmts RC_BRACE
-             {
-               result = ApexDefMethodNode.new(
-                 access_level: val[1],
-                 return_type: val[3].name,
-                 modifiers: val[2],
-                 name: val[4].name,
-                 arguments: val[6] || [],
-                 statements: val[9]
-               )
-             }
+  empty_or_extends :
+                   | EXTENDS name { result = val[1] }
+  empty_or_implements :
+                      | IMPLEMENTS implements { result = val[1] }
+  implements : name { result = [val[0]] }
+             | implements COMMA name { result = val[0].push(val[1]) }
+  class_statements : class_statement { result = [val[0]] }
+                   | class_statements class_statement { result = val[0].push(val[1]) }
+  class_statement : method_declaration
+                  | constructor_declaration
+                  | field_declaration
+                  | comment
+
+  field_declaration : empty_or_modifiers name field_declarators SEMICOLON
+                    {
+                      result = DefInstanceVariableNode.new(
+                        modifiers: val[0],
+                        type: val[1].name,
+                        name: val[3],
+                        lineno: get_lineno(val, 1)
+                      )
+                    }
+  field_declarators : field_declarator { result = [val[0]] }
+                    | field_declarators COLON field_declarator { result = val[0].push(val[2]) }
+  field_declarator : simple_name
+                   | simple_name ASSIGN expression
+                   | simple_name LC_BRACE getter_setter RC_BRACE
+  getter_setter : getter setter
+                | setter getter
+  getter : GET SEMICOLON
+  setter : SET SEMICOLON
+
+constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
+                        {
+                          result = ApexDefInstanceMethodNode.new(
+                            modifiers: val[1],
+                            return_type: :void,
+                            name: val[2].name,
+                            arguments: val[4] || [],
+                            statements: val[7]
+                          )
+                        }
+method_declaration : empty_or_modifiers name simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
+empty_or_parameters :
+                     | parameters
+  parameters: parameter { result = [val[0]] }
+            | parameters COMMA parameter { result = val[0].push(val[2]) }
+parameter : name simple_name
+
+empty_or_modifiers :
+                   | modifiers
+modifiers : modifier { result = [value(val, 0)] }
+          | modifiers modifier { result = val[0].push(val[1]) }
+modifier : ANNOTATION
+         | ABSTRACT
+         | FINAL
+         | GLOBAL
+         | STATIC
+         | PUBLIC
+         | PRIVATE
+         | PROTECTED
+         | WITH SHARING { result = :with_sharing }
+         | WITHOUT SHARING { result = :without_sharing }
+
+trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements RC_BRACE
+
+# ここから頑張る
+
+  statements : statement { result = [val[0]] }
+             | statements statement { result = val[0].push(val[1]) }
+  statement : variable_declaration
+            | if_statement
+            | for_statement
+            | return_statement
+            | break_statement
+            | continue_statement
+            | while_statement
+            | comment
+            | try_statement
+            | expression_statement
+
+  expression_statement : statement_expression SEMICOLON
+  statement_expression : assignment
+                       | pre_increment_expression
+                       | pre_decrement_expression
+                       | post_increment_expression
+                       | post_decrement_expression
+                       | method_invocation
+  try_statement : TRY statements CATCH L_BRACE R_BRACE LC_BRACE statements RC_BRACE
+
+  array_access : name LS_BRACE expression RS_BRACE
+               | primary_expression LS_BRACE expression RS_BRACE
+  field_access : primary_expression DOT IDENT
+empty_or_expression :
+                    | expression
+  expression : assignment_expression
+             | soql_expression
+assignment_expression  : conditional_expression
+                       | assignment
+assignment : left_hand_side ASSIGN assignment_expression
+
+
+  conditional_expression : conditional_or_expression
+                         | conditional_or_expression QUESTION expression COLON conditional_expression
+  conditional_or_expression : conditional_and_expression
+                            | conditional_or_expression CONDITIONAL_OR conditional_and_expression
+
+  conditional_and_expression : inclusive_expression
+                             | conditional_and_expression CONDITIONAL_AND inclusive_expression
+
+  inclusive_expression : exclusive_expression
+                       | inclusive_expression OR exclusive_expression
+
+  exclusive_expression : and_expression
+                       | exclusive_expression TILDE and_expression
+
+and_expression : equality_expression
+               | and_expression AND equality_expression
+
+
+equality_expression : relational_expression
+                    | equality_expression EQUAL relational_expression
+                    | equality_expression NOT_EQUAL relational_expression
+
+relational_expression : shift_expression
+                      | relational_expression LESS_THAN shift_expression
+                      | relational_expression LESS_THAN_EQUAL shift_expression
+                      | relational_expression GREATER_THAN shift_expression
+                      | relational_expression GREATER_THAN_EQUAL shift_expression
+
+shift_expression : additive_expression
+                 | shift_expression LEFT_SHIFT additive_expression
+                 | shift_expression RIGHT_SHIFT additive_expression
+additive_expression : multiplicative_expression
+                    | additive_expression ADD multiplicative_expression
+                    | additive_expression SUB multiplicative_expression
+                    | additive_expression MOD multiplicative_expression
+multiplicative_expression : unary_expression
+                          | multiplicative_expression MUL unary_expression
+                          | multiplicative_expression DIV unary_expression
+
+  unary_expression : pre_increment_expression
+                   | pre_decrement_expression
+                   | postfix_expression
+
+  postfix_expression : post_increment_expression
+                     | post_decrement_expression
+                     | name
+                     | primary_expression
+
+pre_increment_expression : INCR unary_expression
+pre_decrement_expression : DECR unary_expression
+post_increment_expression : postfix_expression INCR
+post_decrement_expression : postfix_expression DECR
+
+  primary_expression : method_invocation
+                     | array_access
+                     | L_BRACE expression R_BRACE
+                     | literal
+                     | field_access
+                     | new_expression
+
+  literal : string_expression
+          | boolean
+          | primary_number
+
+  left_hand_side : name
+                 | array_access
+  string_expression : STRING
+  primary_number : INTEGER
+                 | DOUBLE
+
+  variable_declaration : name variable_declarators SEMICOLON
+  variable_declarators : variable_declarator
+                       | variable_declarators COMMA variable_declarator
+  variable_declarator : name
+                      | name ASSIGN expression
+  method_invocation : name L_BRACE empty_or_arguments R_BRACE
+                    | primary_expression DOT IDENT L_BRACE empty_or_arguments R_BRACE
   empty_or_arguments :
                      | arguments
-  arguments : argument { result = [val[0]] }
-            | arguments COMMA argument { result = val[0].push(val[2]) }
-  argument : ident ident { result = ArgumentNode.new(type: val[0].name, name: val[1].name) }
+  arguments : expression { result = [val[0]] }
+            | arguments COMMA expression { result = val[0].push(val[2]) }
+#  boolean_expression : boolean
+#                     | expression comparator expression { result = OperatorNode.new(type: value(val, 1), left: val[0], right: val[2])}
+
+  name : simple_name
+       | qualified_name
+  simple_name: IDENT
+  qualified_name : name DOT IDENT
 
 
+  boolean : TRUE { result = BooleanNode.new(true) }
+          | FALSE { result = BooleanNode.new(false) }
 
-  stmts : stmt { result = [val[0]] }
-        | stmts stmt { result = val[0].push(val[1]) }
-  stmt  : expr SEMICOLON
-        | assigns SEMICOLON
-        | return_stmt SEMICOLON
-        | break_stmt SEMICOLON
-        | continue_stmt SEMICOLON
-        | variable_def SEMICOLON
-        | boolean_expr SEMICOLON
-        | if_stmt
-        | for_stmt
-        | while_stmt
-        | comment
-  comment : COMMENT { result = CommentNode.new(val[0]) }
-          | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }
-  loop_stmt  : expr
-             | assigns
-             | variable_def
-             | boolean_expr
-  if_stmt : IF L_BRACE expr R_BRACE LC_BRACE stmts RC_BRACE else_stmt_or_empty
-          {
-            result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
-          }
-else_stmt_or_empty :
-                   | else_stmts
-else_stmts : ELSE LC_BRACE stmts RC_BRACE { result = val[2] }
-           | ELSE stmt { result = [val[1]] }
-  for_stmt : FOR L_BRACE empty_or_loop_stmt SEMICOLON empty_or_loop_stmt SEMICOLON empty_or_loop_stmt R_BRACE LC_BRACE stmts RC_BRACE
-           { result = ForNode.new(init_stmt: val[2], exit_condition: val[4], increment_stmt: val[6], statements: val[9]) }
-           | FOR L_BRACE ident ident COLON ident R_BRACE LC_BRACE stmts RC_BRACE
-           { result = ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
-  empty_or_loop_stmt :
-                     | loop_stmt
-  while_stmt : WHILE L_BRACE loop_stmt R_BRACE LC_BRACE stmts RC_BRACE
-             { result = WhileNode.new(condition_stmt: val[2], statements: val[5]) }
-  assigns : assign
-          | ident ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
-          | instance_variable ASSIGN assigns { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
-          | expr LS_BRACE expr RS_BRACE ASSIGN assigns
-          { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[]=, arguments: [val[2], val[5]]) }
-  assign : ident ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
-         | instance_variable ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
-         | expr LS_BRACE expr RS_BRACE ASSIGN expr
-         { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[]=, arguments: [val[2], val[5]]) }
-instance_variable : expr DOT ident { result = InstanceVariableNode.new(receiver: val[0], name: val[2].name) }
-  expr  : number
-        | new_expr
-        | STRING { result = ApexStringNode.new(value(val, 0)) }
-        | call_method
-        | ident INSTANCE_OF ident
-        | ident
-        | expr LS_BRACE expr RS_BRACE
-        { result = CallMethodNode.new(receiver: val[0], apex_method_name: :[], arguments: [val[2]]) }
-        | instance_variable
-        | boolean
-        | NULL { result = NullNode.new }
-        | unary_operator ident { result = OperatorNode.new(type: val[0], left: val[1])}
-        | ident unary_operator { result = OperatorNode.new(type: val[1], left: val[0])}
-        | LS_BRACE SELECT call_arguments FROM soql_options RS_BRACE
-        { result = SoqlNode.new(soql: val[4]) }
-soql_option : ident
+  soql_expression : LS_BRACE SELECT soql_terms FROM soql_terms RS_BRACE
+  new_expression : NEW name L_BRACE empty_or_arguments R_BRACE
+                 {
+                   result = NewNode.new(apex_class_name: val[1].name, arguments: val[3])
+                 }
+  if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
+  else_statement_or_empty :
+                          | else_statements
+  else_statements : ELSE LC_BRACE statements RC_BRACE { result = val[2] }
+                 | ELSE statement { result = [val[1]] }
+  for_statement : FOR L_BRACE empty_or_variable_declaration SEMICOLON empty_or_expression SEMICOLON statement_expression R_BRACE LC_BRACE statements RC_BRACE
+                  { result = ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
+                  | FOR L_BRACE name simple_name COLON name R_BRACE LC_BRACE statements RC_BRACE
+                  { result = ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
+  empty_or_variable_declaration :
+                                | variable_declaration
+  while_statement : WHILE L_BRACE statement_expression R_BRACE LC_BRACE statements RC_BRACE
+                  { result = WhileNode.new(condition_statement: val[2], statements: val[5]) }
+
+  soql_term : name
             | INTEGER
             | STRING
             | ASSIGN
@@ -160,75 +253,23 @@ soql_option : ident
             | LESS_THAN_EQUAL
             | GREATER_THAN
             | GREATER_THAN_EQUAL
-soql_options : soql_option
-             | soql_options soql_option
-new_expr : NEW ident L_BRACE empty_or_call_arguments R_BRACE
-         {
-           result = NewNode.new(apex_class_name: val[1].name, arguments: val[3])
-         }
-  number : term
-         | number ADD term { result = OperatorNode.new(type: :add, left: val[0], right: val[2]) }
-         | number SUB term { result = OperatorNode.new(type: :sub, left: val[0], right: val[2]) }
-  term   : primary_expr
-         | term MUL primary_expr { result = OperatorNode.new(type: :mul, left: val[0], right: val[2]) }
-         | term DIV primary_expr { result = OperatorNode.new(type: :div, left: val[0], right: val[2]) }
-  break_stmt : BREAK { result = BreakNode.new }
-  continue_stmt : CONTINUE { result = ContinueNode.new }
-  return_stmt : RETURN expr { result = ReturnNode.new(expression: val[1]) }
-  primary_expr : INTEGER { result = ApexIntegerNode.new(value(val,0)) }
-               | DOUBLE
-  variable_def : ident ident { result = OperatorNode.new(type: :define, left: val[1]) }
-               | ident ident ASSIGN def_assigns
-               { result = OperatorNode.new(type: :define, left: val[1], right: val[3]) }
-  def_assigns : expr
-              | ident ASSIGN expr { result = OperatorNode.new(type: :assign, left: val[0], right: val[2]) }
-  call_method : expr DOT ident L_BRACE empty_or_call_arguments R_BRACE
-              {
-                result = CallMethodNode.new(
-                  receiver: val[0],
-                  apex_method_name: val[2].name,
-                  arguments: val[4]
-                )
-              }
-  empty_or_call_arguments :
-                          | call_arguments
-  call_arguments : call_argument { result = [val[0]] }
-                 | call_arguments COMMA call_argument { result = val[0].push(val[2]) }
-  call_argument : expr
-                | boolean_expr
-  access_level : PUBLIC
-               | PRIVATE
-               | PROTECTED
-empty_or_modifiers :
-                   | modifiers
-  modifiers : modifier { result = [value(val, 0)] }
-            | modifiers modifier { result = val[0].push(val[1]) }
-  modifier : ABSTRACT
-           | FINAL
-           | GLOBAL
-           | STATIC
-  sharing :
-          | WITH SHARING { result = :with_sharing }
-          | WITHOUT SHARING { result = :without_sharing }
-  boolean : TRUE { result = BooleanNode.new(true) }
-          | FALSE { result = BooleanNode.new(false) }
-  boolean_expr: expr comparator expr { result = OperatorNode.new(type: value(val, 1), left: val[0], right: val[2])}
-  comparator : LESS_THAN
-             | LESS_THAN_EQUAL
-             | GREATER_THAN
-             | GREATER_THAN_EQUAL
-             | NOT_EQUAL
-             | EQUAL
-  empty_or_annotations :
-                       | annotations
-  annotations : annotation { result = [val[0]]}
-              | annotations annotation { result = val[0].push(val[1]) }
-  annotation : ANNOTATION { result = AnnotationNode.new(val[0]) }
-  unary_operator: ADD ADD { result = :plus_plus }
-                | SUB SUB { resutl = :minus_minus }
-  ident : IDENT { result = IdentifyNode.new(name: value(val, 0)) }
-        | GET { result = IdentifyNode.new(name: 'get') }
-        | SET { result = IdentifyNode.new(name: 'set') }
+  soql_terms : soql_term
+             | soql_terms soql_term
+
+  break_statement : BREAK SEMICOLON { result = BreakNode.new }
+  continue_statement : CONTINUE SEMICOLON { result = ContinueNode.new }
+  return_statement : RETURN expression SEMICOLON { result = ReturnNode.new(expression: val[1]) }
+#
+#
+#  comparator : LESS_THAN
+#             | LESS_THAN_EQUAL
+#             | GREATER_THAN
+#             | GREATER_THAN_EQUAL
+#             | NOT_EQUAL
+#             | EQUAL
+
+  comment : COMMENT { result = CommentNode.new(val[0]) }
+          | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }
 end
 
 ---- header

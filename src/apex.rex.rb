@@ -23,6 +23,8 @@ rule
       @\w+               { [:ANNOTATION, [text, lineno]] }
       select{DELIM_BLANK} { [:SELECT, [text, lineno]] }
       from{DELIM_BLANK}               { [:FROM, [text, lineno]] }
+      try(?=[\s\{])               { [:TRY, [text, lineno]] }
+      catch(?=[\s\{])               { [:CATCH, [text, lineno]] }
       null(?=[\s;\(\)])               { [:NULL, [text, lineno]] }
       true(?=[\s;\(\)])               { [:TRUE, [text, lineno]] }
       false(?=[\s;\(\)])              { [:FALSE, [text, lineno]] }
@@ -51,8 +53,8 @@ rule
       static{DELIM_BLANK}           { [:STATIC, [text, lineno]] }
       final{DELIM_BLANK}            { [:FINAL, [text, lineno]] }
       new{DELIM_BLANK}              { [:NEW, [text, lineno]] }
-      get[;\s]           { [:GET, [text, lineno]] }
-      set[;\s]           { [:SET, [text, lineno]] }
+      get(?=[;\s])           { [:GET, [text, lineno]] }
+      set(?=[;\s])           { [:SET, [text, lineno]] }
       extends            { [:EXTENDS, [text, lineno]] }
       implements         { [:IMPLEMENTS, [text, lineno]] }
       abstract           { [:ABSTRACT, [text, lineno]] }
@@ -64,12 +66,21 @@ rule
       {WORD}\[\]         { [:IDENT, [text, lineno]] }
       {WORD}             { [:IDENT, [text, lineno]] }
       \n
+      \+\+                 { [:INCR, [text, lineno]] }
+      \-\-                 { [:DECR, [text, lineno]] }
       \+                 { [:ADD, [text, lineno]] }
       \-                 { [:SUB, [text, lineno]] }
       \*                 { [:MUL, [text, lineno]] }
       \/                 { [:DIV, [text, lineno]] }
+      &                  { [:AND, [text, lineno]] }
+      \|                  { [:OR, [text, lineno]] }
+      \^                 { [:TILDE, [text, lineno]] }
+      &&                 { [:CONDITIONAL_AND, [text, lineno]] }
+      \|\|                 { [:CONDITIONAL_OR, [text, lineno]] }
       ==                 { [:EQUAL, [text, lineno]] }
       !=                 { [:NOT_EQUAL, [text, lineno]] }
+      <<                 { [:LEFT_SHIFT, [text, lineno]] }
+      >>                 { [:RIGHT_SHIFT, [text, lineno]] }
       <                  { [:LESS_THAN, [text, lineno]] }
       >                  { [:GREATER_THAN, [text, lineno]] }
       <=                 { [:LESS_THAN_EQUAL, [text, lineno]] }

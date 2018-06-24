@@ -27,7 +27,7 @@ module ApexParser
   end
 
   class ApexClassNode < Base
-    attr_accessor :access_level, :name, :statements,
+    attr_accessor :name, :statements, :modifiers,
                   :apex_super_class, :implements,
                   :apex_instance_variables, :apex_instance_methods,
                   :apex_static_variables, :apex_static_methods
@@ -52,7 +52,7 @@ module ApexParser
   end
 
   class ApexDefMethodNode < Base
-    attr_accessor :name, :access_level, :return_type,
+    attr_accessor :name, :modifiers, :return_type,
                   :arguments, :statements, :apex_class_name,
                   :modifiers
 
@@ -75,7 +75,7 @@ module ApexParser
   end
 
   class ApexStaticVariableNode < Base
-    attr_accessor :type, :name, :access_level, :expression
+    attr_accessor :type, :name, :modifiers, :expression
 
     def add_to_class(klass)
       klass.apex_static_variables[name] = self
@@ -95,7 +95,7 @@ module ApexParser
   end
 
   class DefInstanceVariableNode < Base
-    attr_accessor :type, :name, :access_level, :expression, :apex_class_node
+    attr_accessor :type, :name, :modifiers, :expression, :apex_class_node
 
     def add_to_class(klass)
       self.apex_class_node = klass
