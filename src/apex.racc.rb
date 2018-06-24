@@ -48,8 +48,8 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                     {
                       result = DefInstanceVariableNode.new(
                         modifiers: val[0],
-                        type: val[1].name,
-                        name: val[3],
+                        type: value(val, 1),
+                        name: val[2],
                         lineno: get_lineno(val, 1)
                       )
                     }
@@ -65,20 +65,29 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
 
 constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
                         {
-                          result = ApexDefInstanceMethodNode.new(
-                            modifiers: val[1],
+                          result = ApexDefMethodNode.new(
+                            modifiers: val[0],
                             return_type: :void,
-                            name: val[2].name,
-                            arguments: val[4] || [],
-                            statements: val[7]
+                            name: value(val, 1),
+                            arguments: val[3],
+                            statements: val[6]
                           )
                         }
 method_declaration : empty_or_modifiers name simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
+                   {
+                     result = ApexDefMethodNode.new(
+                       modifiers: val[0],
+                       return_type: value(val, 1),
+                       name: value(val, 2),
+                       arguments: val[4],
+                       statements: val[7]
+                     )
+                   }
 empty_or_parameters :
                      | parameters
   parameters: parameter { result = [val[0]] }
             | parameters COMMA parameter { result = val[0].push(val[2]) }
-parameter : name simple_name
+parameter : name simple_name { result = ArgumentNode.new(type: value(val, 0), name: value(val, 1)) }
 
 empty_or_modifiers :
                    | modifiers
@@ -96,8 +105,6 @@ modifier : ANNOTATION
          | WITHOUT SHARING { result = :without_sharing }
 
 trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements RC_BRACE
-
-# ここから頑張る
 
   statements : statement { result = [val[0]] }
              | statements statement { result = val[0].push(val[1]) }
@@ -122,15 +129,23 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
   try_statement : TRY statements CATCH L_BRACE R_BRACE LC_BRACE statements RC_BRACE
 
   array_access : name LS_BRACE expression RS_BRACE
+               { result = VariableNode.new(name: value(val, 0), index: val[2]) }
                | primary_expression LS_BRACE expression RS_BRACE
   field_access : primary_expression DOT IDENT
 empty_or_expression :
                     | expression
   expression : assignment_expression
-             | soql_expression
 assignment_expression  : conditional_expression
                        | assignment
+                       | soql_expression
 assignment : left_hand_side ASSIGN assignment_expression
+           {
+             result = OperatorNode.new(
+               type: :assign,
+               left: val[0],
+               right: val[2]
+             )
+           }
 
 
   conditional_expression : conditional_or_expression
@@ -192,6 +207,7 @@ post_decrement_expression : postfix_expression DECR
                      | literal
                      | field_access
                      | new_expression
+                     | NULL
 
   literal : string_expression
           | boolean
@@ -200,49 +216,81 @@ post_decrement_expression : postfix_expression DECR
   left_hand_side : name
                  | array_access
   string_expression : STRING
-  primary_number : INTEGER
+  primary_number : INTEGER { result = ApexIntegerNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
                  | DOUBLE
 
   variable_declaration : name variable_declarators SEMICOLON
+                       {
+                         result = OperatorNode.new(
+                           type: :define,
+                           left: val[0],
+                           right: val[1]
+                         )
+                       }
   variable_declarators : variable_declarator
                        | variable_declarators COMMA variable_declarator
   variable_declarator : name
                       | name ASSIGN expression
+                      {
+                        result = OperatorNode.new(
+                          type: :assign,
+                          left: val[0],
+                          right: val[2]
+                        )
+                      }
   method_invocation : name L_BRACE empty_or_arguments R_BRACE
+                     {
+                       result = MethodInvocationNode.new(
+                         name: val[0][0],
+                         arguments: val[2],
+                         lineno: get_lineno(val, 0)
+                       )
+                     }
                     | primary_expression DOT IDENT L_BRACE empty_or_arguments R_BRACE
+                    {
+                      result = MethodInvocationNode.new(
+                        expression: val[0],
+                        arguments: val[2],
+                        lineno: get_lineno(val, 1)
+                      )
+                    }
   empty_or_arguments :
                      | arguments
   arguments : expression { result = [val[0]] }
             | arguments COMMA expression { result = val[0].push(val[2]) }
-#  boolean_expression : boolean
-#                     | expression comparator expression { result = OperatorNode.new(type: value(val, 1), left: val[0], right: val[2])}
 
   name : simple_name
        | qualified_name
-  simple_name: IDENT
-  qualified_name : name DOT IDENT
+  simple_name: IDENT { result = [[value(val, 0)], get_lineno(val, 0)] }
+  qualified_name : name DOT IDENT { result = [val[0][0].push(value(val, 2)), get_lineno(val, 1)] }
 
 
   boolean : TRUE { result = BooleanNode.new(true) }
           | FALSE { result = BooleanNode.new(false) }
 
   soql_expression : LS_BRACE SELECT soql_terms FROM soql_terms RS_BRACE
+                   {
+                     result = SoqlNode.new(soql: val[4])
+                   }
   new_expression : NEW name L_BRACE empty_or_arguments R_BRACE
                  {
-                   result = NewNode.new(apex_class_name: val[1].name, arguments: val[3])
+                   result = NewNode.new(apex_class_name: value(val, 1), arguments: val[3])
                  }
   if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
+               {
+                 result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
+               }
   else_statement_or_empty :
                           | else_statements
   else_statements : ELSE LC_BRACE statements RC_BRACE { result = val[2] }
                  | ELSE statement { result = [val[1]] }
-  for_statement : FOR L_BRACE empty_or_variable_declaration SEMICOLON empty_or_expression SEMICOLON statement_expression R_BRACE LC_BRACE statements RC_BRACE
+  for_statement : FOR L_BRACE empty_or_variable_declarators SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
                   | FOR L_BRACE name simple_name COLON name R_BRACE LC_BRACE statements RC_BRACE
                   { result = ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
-  empty_or_variable_declaration :
-                                | variable_declaration
-  while_statement : WHILE L_BRACE statement_expression R_BRACE LC_BRACE statements RC_BRACE
+  empty_or_variable_declarators :
+                                | name variable_declarators
+  while_statement : WHILE L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = WhileNode.new(condition_statement: val[2], statements: val[5]) }
 
   soql_term : name
@@ -259,14 +307,6 @@ post_decrement_expression : postfix_expression DECR
   break_statement : BREAK SEMICOLON { result = BreakNode.new }
   continue_statement : CONTINUE SEMICOLON { result = ContinueNode.new }
   return_statement : RETURN expression SEMICOLON { result = ReturnNode.new(expression: val[1]) }
-#
-#
-#  comparator : LESS_THAN
-#             | LESS_THAN_EQUAL
-#             | GREATER_THAN
-#             | GREATER_THAN_EQUAL
-#             | NOT_EQUAL
-#             | EQUAL
 
   comment : COMMENT { result = CommentNode.new(val[0]) }
           | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }

@@ -56,6 +56,13 @@ module ApexParser
                   :arguments, :statements, :apex_class_name,
                   :modifiers
 
+    def initialize(*args)
+      super
+
+      @statements ||= []
+      @arguments ||= []
+    end
+
     def native?
       false
     end
@@ -293,8 +300,8 @@ module ApexParser
     end
   end
 
-  class CallMethodNode < Base
-    attr_accessor :receiver, :arguments, :apex_method_name
+  class MethodInvocationNode < Base
+    attr_accessor :name, :arguments, :expression, :method_name
 
     def initialize(*args)
       super
@@ -312,6 +319,10 @@ module ApexParser
     def accept(visitor, local_scope)
       visitor.visit_operator(self, local_scope)
     end
+  end
+
+  class VariableNode < Base
+    attr_accessor :name, :index
   end
 
   class AnyObject; end

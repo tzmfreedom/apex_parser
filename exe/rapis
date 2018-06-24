@@ -1,20 +1,23 @@
 #!/usr/bin/env ruby
 
-require 'apex_parser/interpreter_visitor'
+require 'apex_parser/ast_visitor'
 require 'json'
 
 Bundler.require
 
 parser = ApexParser::ApexCompiler.new
+parser.instance_eval { @yydebug = true }
 
-interpreter = ApexParser::InterpreterVisitor.new
+interpreter = ApexParser::AstVisitor.new
 Dir['./lib/*.cls'].each do |filepath|
   root_stmts = parser.scan_str(File.read(filepath))
   root_stmts.each { |stmt| stmt.accept(interpreter) }
+  pp root_stmts
 end
-call_method_node = ApexParser::CallMethodNode.new(
-  receiver: ApexParser::IdentifyNode.new(name: :Hoge),
-  arguments: [],
-  apex_method_name: :action
-)
-call_method_node.accept(interpreter, {})
+
+# call_method_node = ApexParser::CallMethodNode.new(
+#   receiver: ApexParser::IdentifyNode.new(name: :Hoge),
+#   arguments: [],
+#   apex_method_name: :action
+# )
+# call_method_node.accept(interpreter, {})

@@ -72,19 +72,19 @@ rule
       \-                 { [:SUB, [text, lineno]] }
       \*                 { [:MUL, [text, lineno]] }
       \/                 { [:DIV, [text, lineno]] }
+      &&                 { [:CONDITIONAL_AND, [text, lineno]] }
+      \|\|                 { [:CONDITIONAL_OR, [text, lineno]] }
       &                  { [:AND, [text, lineno]] }
       \|                  { [:OR, [text, lineno]] }
       \^                 { [:TILDE, [text, lineno]] }
-      &&                 { [:CONDITIONAL_AND, [text, lineno]] }
-      \|\|                 { [:CONDITIONAL_OR, [text, lineno]] }
       ==                 { [:EQUAL, [text, lineno]] }
       !=                 { [:NOT_EQUAL, [text, lineno]] }
       <<                 { [:LEFT_SHIFT, [text, lineno]] }
       >>                 { [:RIGHT_SHIFT, [text, lineno]] }
-      <                  { [:LESS_THAN, [text, lineno]] }
-      >                  { [:GREATER_THAN, [text, lineno]] }
       <=                 { [:LESS_THAN_EQUAL, [text, lineno]] }
       >=                 { [:GREATER_THAN_EQUAL, [text, lineno]] }
+      <                  { [:LESS_THAN, [text, lineno]] }
+      >                  { [:GREATER_THAN, [text, lineno]] }
       =                  { [:ASSIGN, [text, lineno]] }
       \:                 { [:COLON, [text, lineno]]}
       ;                  { [:SEMICOLON, [text, lineno]]}
