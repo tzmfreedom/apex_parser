@@ -121,6 +121,7 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
 
   expression_statement : statement_expression SEMICOLON
   statement_expression : assignment
+                       | field_access # 不要かも
                        | pre_increment_expression
                        | pre_decrement_expression
                        | post_increment_expression
@@ -131,7 +132,7 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
   array_access : name LS_BRACE expression RS_BRACE
                { result = VariableNode.new(name: value(val, 0), index: val[2]) }
                | primary_expression LS_BRACE expression RS_BRACE
-  field_access : primary_expression DOT IDENT
+  field_access : primary_expression DOT IDENT { result = val }
 empty_or_expression :
                     | expression
   expression : assignment_expression
