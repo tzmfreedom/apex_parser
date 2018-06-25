@@ -11,6 +11,11 @@ $(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)
 $(LEXOR_PATH): src/apex.rex.rb
 	bundle exec rex src/apex.rex.rb -i -o $(LEXOR_PATH)
 
+.PHONY: test
+debug:
+	bundle exec racc src/apex.racc.rb -g -v -o $(COMPILER_PATH)
+	$(MAKE) test
+
 .PHONY: install
 install:
 	@bundle install --path=vendor/bundle -j4

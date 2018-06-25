@@ -4,6 +4,15 @@ public class Hoge extends HogeSuper{
 
     @aaa
     public static Integer action() {
+        System.debug('*** variable test assign***');
+        Integer b = 100;
+        System.debug(b);
+        Integer a = b = 20;
+        System.debug(a);
+        System.debug(b);
+    }
+/*
+    public static Integer action2() {
         AWSClient client = new AWSClient('a', 'b', 'c');
         System.debug(client.getAccessKeyId());
         System.debug(client.getAccessKeySecret());
@@ -12,13 +21,6 @@ public class Hoge extends HogeSuper{
         System.debug(account);
         new Fuga().aaa();
         System.debug(new Fuga());
-        System.debug('*** variable test assign***');
-        Integer b = 100;
-        System.debug(b);
-        Integer a = b = 20;
-        System.debug(a);
-        System.debug(b);
-
         System.debug('*** instance variable/method test ***');
         Hoge a = new Hoge();
         System.debug(a);
@@ -63,7 +65,7 @@ public class Hoge extends HogeSuper{
             System.debug('falseaaaa');
         }
         System.debug('*** for loop ***');
-        for (Integer i = 0; i < 2; i++) {
+        for (Integer j = 0 ; ; ){
             System.debug(i);
         }
         System.debug('*** while loop ***');
@@ -87,6 +89,7 @@ public class Hoge extends HogeSuper{
     public Integer fuga(){
         this.a = 10000000;
         System.debug(this.a);
+        new Hoge().aaa;
         return 12345;
     }
 
@@ -95,4 +98,5 @@ public class Hoge extends HogeSuper{
         this.contacts = [SELECT id FROM Contact];
         return 1;
     }
+    */
 }

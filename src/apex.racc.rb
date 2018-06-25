@@ -49,7 +49,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                       result = DefInstanceVariableNode.new(
                         modifiers: val[0],
                         type: value(val, 1),
-                        name: val[2],
+                        name: val[2][0][0][0],
                         lineno: get_lineno(val, 1)
                       )
                     }
@@ -78,7 +78,7 @@ method_declaration : empty_or_modifiers name simple_name L_BRACE empty_or_parame
                      result = ApexDefMethodNode.new(
                        modifiers: val[0],
                        return_type: value(val, 1),
-                       name: value(val, 2),
+                       name: val[2][0][0],
                        arguments: val[4],
                        statements: val[7]
                      )
@@ -132,7 +132,7 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
   array_access : name LS_BRACE expression RS_BRACE
                { result = VariableNode.new(name: value(val, 0), index: val[2]) }
                | primary_expression LS_BRACE expression RS_BRACE
-  field_access : primary_expression DOT IDENT { result = val }
+  field_access : primary_expression DOT simple_name { result = val }
 empty_or_expression :
                     | expression
   expression : assignment_expression

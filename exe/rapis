@@ -2,22 +2,31 @@
 
 require 'apex_parser/ast_visitor'
 require 'json'
+require 'optparse'
 
 Bundler.require
 
 parser = ApexParser::ApexCompiler.new
 parser.instance_eval { @yydebug = true }
 
+show_ast = false
+opt_parser = OptionParser.new
+opt_parser.on('-s') {|v| show_ast = true }
+opt_parser.parse(ARGV)
+
 interpreter = ApexParser::AstVisitor.new
-Dir['./lib/*.cls'].each do |filepath|
+Dir['./lib/sample.cls'].each do |filepath|
   root_stmts = parser.scan_str(File.read(filepath))
   root_stmts.each { |stmt| stmt.accept(interpreter) }
-  pp root_stmts
+  pp root_stmts if show_ast
 end
 
-# call_method_node = ApexParser::CallMethodNode.new(
-#   receiver: ApexParser::IdentifyNode.new(name: :Hoge),
-#   arguments: [],
-#   apex_method_name: :action
-# )
-# call_method_node.accept(interpreter, {})
+return if show_ast
+
+
+call_method_node = ApexParser::MethodInvocationNode.new(
+  receiver: ApexParser::IdentifyNode.new(name: :Hoge),
+  arguments: [],
+  apex_method_name: :action
+)
+call_method_node.accept(interpreter, {})
