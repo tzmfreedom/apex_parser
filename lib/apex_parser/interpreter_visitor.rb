@@ -51,8 +51,30 @@ module ApexParser
           ApexIntegerNode.new(node.left.accept(self, local_scope).value / node.right.accept(self, local_scope).value)
         when :mul
           ApexIntegerNode.new(node.left.accept(self, local_scope).value * node.right.accept(self, local_scope).value)
+        when :<<
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value << node.right.accept(self, local_scope).value)
+        when :'<<<'
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value << node.right.accept(self, local_scope).value)
+        when :>>
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value >> node.right.accept(self, local_scope).value)
+        when :'>>>'
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value >> node.right.accept(self, local_scope).value)
+        when :&
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value && node.right.accept(self, local_scope).value)
+        when :|
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value | node.right.accept(self, local_scope).value)
+        when :^
+          ApexIntegerNode.new(node.left.accept(self, local_scope).value ^ node.right.accept(self, local_scope).value)
+        when :'&&'
+          BooleanNode.new(node.left.accept(self, local_scope).value && node.right.accept(self, local_scope).value)
+        when :'||'
+          BooleanNode.new(node.left.accept(self, local_scope).value || node.right.accept(self, local_scope).value)
         when :!=
           BooleanNode.new(node.left.accept(self, local_scope).value != node.right.accept(self, local_scope).value)
+        when :'!=='
+          BooleanNode.new(node.left.accept(self, local_scope).value == node.right.accept(self, local_scope).value)
+        when :===
+          BooleanNode.new(node.left.accept(self, local_scope).value == node.right.accept(self, local_scope).value)
         when :==
           BooleanNode.new(node.left.accept(self, local_scope).value == node.right.accept(self, local_scope).value)
         when :<=
