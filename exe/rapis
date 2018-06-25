@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'apex_parser/ast_visitor'
+require 'apex_parser/visitor/interpreter'
 require 'json'
 require 'optparse'
 
@@ -14,7 +14,7 @@ opt_parser = OptionParser.new
 opt_parser.on('-s') {|v| show_ast = true }
 opt_parser.parse(ARGV)
 
-interpreter = ApexParser::AstVisitor.new
+interpreter = ApexParser::Visitor::Interpreter.new
 Dir['./lib/sample.cls'].each do |filepath|
   root_stmts = parser.scan_str(File.read(filepath))
   root_stmts.each { |stmt| stmt.accept(interpreter) }
@@ -24,8 +24,8 @@ end
 return if show_ast
 
 
-call_method_node = ApexParser::MethodInvocationNode.new(
-  receiver: ApexParser::IdentifyNode.new(name: :Hoge),
+call_method_node = ApexParser::AST::MethodInvocationNode.new(
+  receiver: ApexParser::AST::NameNode.new(name: [:Hoge]),
   arguments: [],
   apex_method_name: :action
 )

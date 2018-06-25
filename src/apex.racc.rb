@@ -22,7 +22,7 @@ rule
 
 class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_implements LC_BRACE class_statements RC_BRACE
                   {
-                    result = ApexClassNode.new(
+                    result = AST::ApexClassNode.new(
                       modifiers: val[0],
                       name: value(val, 2),
                       statements: val[6],
@@ -46,18 +46,19 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
 
   field_declaration : empty_or_modifiers name field_declarators SEMICOLON
                     {
-                      result = DefInstanceVariableNode.new(
+                      result = AST::FieldDeclarationNode.new(
                         modifiers: val[0],
-                        type: value(val, 1),
-                        name: val[2][0][0][0],
-                        lineno: get_lineno(val, 1)
+                        type: val[1],
+                        expression: val[2],
+                        lineno: val[1].lineno
                       )
                     }
   field_declarators : field_declarator { result = [val[0]] }
                     | field_declarators COLON field_declarator { result = val[0].push(val[2]) }
-  field_declarator : simple_name
-                   | simple_name ASSIGN expression
+  field_declarator : simple_name { result = AST::FieldDeclarator.new(name: val[0]) }
+                   | simple_name ASSIGN expression { result= AST::FieldDeclarator.new(name: val[0], expression: val[2]) }
                    | simple_name LC_BRACE getter_setter RC_BRACE
+                   { result = AST::FieldDeclarator.new(name: val[0], expression: val[2]) }
   getter_setter : getter setter
                 | setter getter
   getter : GET SEMICOLON
@@ -65,29 +66,31 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
 
 constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
                         {
-                          result = ApexDefMethodNode.new(
+                          result = AST::MethodDeclarationNode.new(
                             modifiers: val[0],
                             return_type: :void,
-                            name: value(val, 1),
+                            name: val[1],
                             arguments: val[3],
-                            statements: val[6]
+                            statements: val[6],
+                            lineno: val[1].lineno
                           )
                         }
 method_declaration : empty_or_modifiers name simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
                    {
-                     result = ApexDefMethodNode.new(
+                     result = AST::MethodDeclarationNode.new(
                        modifiers: val[0],
-                       return_type: value(val, 1),
-                       name: val[2][0][0],
+                       return_type: val[1],
+                       name: val[2],
                        arguments: val[4],
-                       statements: val[7]
+                       statements: val[7],
+                       lineno: val[1].lineno
                      )
                    }
 empty_or_parameters :
                      | parameters
   parameters: parameter { result = [val[0]] }
             | parameters COMMA parameter { result = val[0].push(val[2]) }
-parameter : name simple_name { result = ArgumentNode.new(type: value(val, 0), name: value(val, 1)) }
+parameter : name simple_name { result = AST::ArgumentNode.new(type: value(val, 0), name: value(val, 1)) }
 
 empty_or_modifiers :
                    | modifiers
@@ -130,7 +133,7 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
   try_statement : TRY statements CATCH L_BRACE R_BRACE LC_BRACE statements RC_BRACE
 
   array_access : name LS_BRACE expression RS_BRACE
-               { result = VariableNode.new(name: value(val, 0), index: val[2]) }
+               { result = AST::VariableNode.new(name: value(val, 0), index: val[2]) }
                | primary_expression LS_BRACE expression RS_BRACE
   field_access : primary_expression DOT simple_name { result = val }
 empty_or_expression :
@@ -141,7 +144,7 @@ assignment_expression  : conditional_expression
                        | soql_expression
 assignment : left_hand_side ASSIGN assignment_expression
            {
-             result = OperatorNode.new(
+             result = AST::OperatorNode.new(
                type: :assign,
                left: val[0],
                right: val[2]
@@ -150,43 +153,43 @@ assignment : left_hand_side ASSIGN assignment_expression
 
 
   conditional_expression : conditional_or_expression
-                         | conditional_or_expression QUESTION expression COLON conditional_expression
+                         | conditional_or_expression QUESTION expression COLON conditional_expression { result = AST::OperationNode.new(type: :'?', left: val[0], right: val[2]) }
   conditional_or_expression : conditional_and_expression
-                            | conditional_or_expression CONDITIONAL_OR conditional_and_expression
+                            | conditional_or_expression CONDITIONAL_OR conditional_and_expression { result = AST::OperationNode.new(type: :'||', left: val[0], right: val[2]) }
 
   conditional_and_expression : inclusive_expression
-                             | conditional_and_expression CONDITIONAL_AND inclusive_expression
+                             | conditional_and_expression CONDITIONAL_AND inclusive_expression { result = AST::OperationNode.new(type: :'&&', left: val[0], right: val[2]) }
 
   inclusive_expression : exclusive_expression
-                       | inclusive_expression OR exclusive_expression
+                       | inclusive_expression OR exclusive_expression { result = AST::OperationNode.new(type: :|, left: val[0], right: val[2]) }
 
   exclusive_expression : and_expression
-                       | exclusive_expression TILDE and_expression
+                       | exclusive_expression TILDE and_expression { result = AST::OperationNode.new(type: :~, left: val[0], right: val[2]) }
 
 and_expression : equality_expression
-               | and_expression AND equality_expression
+               | and_expression AND equality_expression { result = AST::OperationNode.new(type: :&, left: val[0], right: val[2]) }
 
 
 equality_expression : relational_expression
-                    | equality_expression EQUAL relational_expression
-                    | equality_expression NOT_EQUAL relational_expression
+                    | equality_expression EQUAL relational_expression { result = AST::OperationNode.new(type: :==, left: val[0], right: val[2]) }
+                    | equality_expression NOT_EQUAL relational_expression { result = AST::OperationNode.new(type: :!=, left: val[0], right: val[2]) }
 
 relational_expression : shift_expression
-                      | relational_expression LESS_THAN shift_expression
-                      | relational_expression LESS_THAN_EQUAL shift_expression
-                      | relational_expression GREATER_THAN shift_expression
-                      | relational_expression GREATER_THAN_EQUAL shift_expression
+                      | relational_expression LESS_THAN shift_expression { result = AST::OperationNode.new(type: :<, left: val[0], right: val[2]) }
+                      | relational_expression LESS_THAN_EQUAL shift_expression { result = AST::OperationNode.new(type: :<=, left: val[0], right: val[2]) }
+                      | relational_expression GREATER_THAN shift_expression { result = AST::OperationNode.new(type: :>, left: val[0], right: val[2]) }
+                      | relational_expression GREATER_THAN_EQUAL shift_expression { result = AST::OperationNode.new(type: :>=, left: val[0], right: val[2]) }
 
 shift_expression : additive_expression
-                 | shift_expression LEFT_SHIFT additive_expression
-                 | shift_expression RIGHT_SHIFT additive_expression
+                 | shift_expression LEFT_SHIFT additive_expression { result = AST::OperationNode.new(type: :<<, left: val[0], right: val[2]) }
+                 | shift_expression RIGHT_SHIFT additive_expression { result = AST::OperationNode.new(type: :>>, left: val[0], right: val[2]) }
 additive_expression : multiplicative_expression
-                    | additive_expression ADD multiplicative_expression
-                    | additive_expression SUB multiplicative_expression
-                    | additive_expression MOD multiplicative_expression
+                    | additive_expression ADD multiplicative_expression { result = AST::OperationNode.new(type: :+, left: val[0], right: val[2]) }
+                    | additive_expression SUB multiplicative_expression { result = AST::OperationNode.new(type: :-, left: val[0], right: val[2]) }
 multiplicative_expression : unary_expression
-                          | multiplicative_expression MUL unary_expression
-                          | multiplicative_expression DIV unary_expression
+                          | multiplicative_expression MUL unary_expression { result = AST::OperationNode.new(type: :*, left: val[0], right: val[2]) }
+                          | multiplicative_expression DIV unary_expression { result = AST::OperationNode.new(type: :'/', left: val[0], right: val[2]) }
+                          | multiplicative_expression MOD unary_expression { result = AST::OperationNode.new(type: :%, left: val[0], right: val[2]) }
 
   unary_expression : pre_increment_expression
                    | pre_decrement_expression
@@ -197,18 +200,18 @@ multiplicative_expression : unary_expression
                      | name
                      | primary_expression
 
-pre_increment_expression : INCR unary_expression
-pre_decrement_expression : DECR unary_expression
-post_increment_expression : postfix_expression INCR
-post_decrement_expression : postfix_expression DECR
+pre_increment_expression : INCR unary_expression { result = AST::OperationNode.new(type: :pre_increment, left: val[0]) }
+pre_decrement_expression : DECR unary_expression { result = AST::OperationNode.new(type: :pre_decrement, left: val[0]) }
+post_increment_expression : postfix_expression INCR { result = AST::OperationNode.new(type: :post_increment, left: val[0]) }
+post_decrement_expression : postfix_expression DECR { result = AST::OperationNode.new(type: :post_decrement, left: val[0]) }
 
   primary_expression : method_invocation
                      | array_access
-                     | L_BRACE expression R_BRACE
+                     | L_BRACE expression R_BRACE { result = val[1] }
                      | literal
                      | field_access
                      | new_expression
-                     | NULL
+                     | NULL { result = AST::NullNode.new(lineno: get_lineno(val, 0)) }
 
   literal : string_expression
           | boolean
@@ -216,13 +219,14 @@ post_decrement_expression : postfix_expression DECR
 
   left_hand_side : name
                  | array_access
-  string_expression : STRING
-  primary_number : INTEGER { result = ApexIntegerNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
-                 | DOUBLE
+                 | field_access
+  string_expression : STRING { result = AST::ApexStringNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
+  primary_number : INTEGER { result = AST::ApexIntegerNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
+                 | DOUBLE { result = AST::ApexDoubleNode.new(value: val(val, 0), lineno: get_lineno(val, 0)) }
 
   variable_declaration : name variable_declarators SEMICOLON
                        {
-                         result = OperatorNode.new(
+                         result = AST::OperatorNode.new(
                            type: :define,
                            left: val[0],
                            right: val[1]
@@ -230,26 +234,43 @@ post_decrement_expression : postfix_expression DECR
                        }
   variable_declarators : variable_declarator
                        | variable_declarators COMMA variable_declarator
+                       {
+                         result = OperatorNode.new(
+                           type: :define,
+                           left: val[0],
+                           right: AST::NullNode.new,
+                           lineno: val[0].lineno
+                         )
+                       }
   variable_declarator : name
+                       {
+                         result = AST::OperatorNode.new(
+                           type: :define,
+                           left: val[0],
+                           right: NullNode.new,
+                           lineno: val[0].lineno
+                         )
+                       }
                       | name ASSIGN expression
                       {
-                        result = OperatorNode.new(
-                          type: :assign,
+                        result = AST::OperatorNode.new(
+                          type: :define,
                           left: val[0],
-                          right: val[2]
+                          right: val[2],
+                          lineno: val[0].lineno
                         )
                       }
   method_invocation : name L_BRACE empty_or_arguments R_BRACE
                      {
-                       result = MethodInvocationNode.new(
-                         name: val[0][0],
+                       result = AST::MethodInvocationNode.new(
+                         name: val[0],
                          arguments: val[2],
-                         lineno: get_lineno(val, 0)
+                         lineno: val[0].lineno
                        )
                      }
                     | primary_expression DOT IDENT L_BRACE empty_or_arguments R_BRACE
                     {
-                      result = MethodInvocationNode.new(
+                      result = AST::MethodInvocationNode.new(
                         expression: val[0],
                         arguments: val[2],
                         lineno: get_lineno(val, 1)
@@ -262,37 +283,37 @@ post_decrement_expression : postfix_expression DECR
 
   name : simple_name
        | qualified_name
-  simple_name: IDENT { result = [[value(val, 0)], get_lineno(val, 0)] }
-  qualified_name : name DOT IDENT { result = [val[0][0].push(value(val, 2)), get_lineno(val, 1)] }
+  simple_name: IDENT { result = AST::NameNode.new(value: [value(val, 0)], lineno: get_lineno(val, 0)) }
+  qualified_name : name DOT IDENT { val[0].value.push(value(val, 2)) }
 
 
-  boolean : TRUE { result = BooleanNode.new(true) }
-          | FALSE { result = BooleanNode.new(false) }
+  boolean : TRUE { result = AST::BooleanNode.new(true) }
+          | FALSE { result = AST::BooleanNode.new(false) }
 
   soql_expression : LS_BRACE SELECT soql_terms FROM soql_terms RS_BRACE
                    {
-                     result = SoqlNode.new(soql: val[4])
+                     result = AST::SoqlNode.new(soql: val[4])
                    }
   new_expression : NEW name L_BRACE empty_or_arguments R_BRACE
                  {
-                   result = NewNode.new(apex_class_name: value(val, 1), arguments: val[3])
+                   result = AST::NewNode.new(apex_class_name: value(val, 1), arguments: val[3])
                  }
   if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
                {
-                 result = IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
+                 result = AST::IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
                }
   else_statement_or_empty :
                           | else_statements
   else_statements : ELSE LC_BRACE statements RC_BRACE { result = val[2] }
                  | ELSE statement { result = [val[1]] }
   for_statement : FOR L_BRACE empty_or_variable_declarators SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
-                  { result = ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
+                  { result = AST::ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
                   | FOR L_BRACE name simple_name COLON name R_BRACE LC_BRACE statements RC_BRACE
-                  { result = ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
+                  { result = AST::ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
   empty_or_variable_declarators :
                                 | name variable_declarators
   while_statement : WHILE L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE
-                  { result = WhileNode.new(condition_statement: val[2], statements: val[5]) }
+                  { result = AST::WhileNode.new(condition_statement: val[2], statements: val[5]) }
 
   soql_term : name
             | INTEGER
@@ -305,24 +326,24 @@ post_decrement_expression : postfix_expression DECR
   soql_terms : soql_term
              | soql_terms soql_term
 
-  break_statement : BREAK SEMICOLON { result = BreakNode.new }
-  continue_statement : CONTINUE SEMICOLON { result = ContinueNode.new }
-  return_statement : RETURN expression SEMICOLON { result = ReturnNode.new(expression: val[1]) }
+  break_statement : BREAK SEMICOLON { result = AST::BreakNode.new }
+  continue_statement : CONTINUE SEMICOLON { result = AST::ContinueNode.new }
+  return_statement : RETURN expression SEMICOLON { result = AST::ReturnNode.new(expression: val[1]) }
 
-  comment : COMMENT { result = CommentNode.new(val[0]) }
-          | REM_IN COMMENT REM_OUT { result = CommentNode.new(val[1]) }
+  comment : COMMENT { result = AST::CommentNode.new(val[0]) }
+          | REM_IN COMMENT REM_OUT { result = AST::CommentNode.new(val[1]) }
 end
 
 ---- header
 
 require 'apex_parser/apex_compiler.l'
 require 'apex_parser/util/hash_with_upper_cased_symbolic_key'
-require 'apex_parser/node/node'
-require 'apex_parser/apex_class_creator'
+require 'apex_parser/ast/node/node'
 
-Dir[File.expand_path('./runtime/**/*.rb', __dir__)].each do |f|
+Dir[File.expand_path('./ast/node/**/*.rb', __dir__)].each do |f|
   require f
 end
+
 
 ---- inner
 
