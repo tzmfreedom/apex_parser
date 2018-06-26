@@ -3,7 +3,7 @@ LEXOR_PATH := lib/apex_parser/apex_compiler.l.rb
 
 .PHONY: ast
 ast: $(COMPILER_PATH)
-	@bundle exec rapis -s
+	@bundle exec rapis -s examples/sample.cls
 
 .PHONY: test
 test: $(COMPILER_PATH)

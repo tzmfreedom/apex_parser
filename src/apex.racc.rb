@@ -235,7 +235,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
   variable_declarators : variable_declarator
                        | variable_declarators COMMA variable_declarator
                        {
-                         result = OperatorNode.new(
+                         result = AST::OperatorNode.new(
                            type: :define,
                            left: val[0],
                            right: AST::NullNode.new,
@@ -263,7 +263,8 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
   method_invocation : name L_BRACE empty_or_arguments R_BRACE
                      {
                        result = AST::MethodInvocationNode.new(
-                         name: val[0],
+                         receiver: val[0],
+                         apex_method_name: val[0].value.pop,
                          arguments: val[2],
                          lineno: val[0].lineno
                        )
@@ -271,8 +272,9 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
                     | primary_expression DOT IDENT L_BRACE empty_or_arguments R_BRACE
                     {
                       result = AST::MethodInvocationNode.new(
-                        expression: val[0],
-                        arguments: val[2],
+                        receiver: val[0],
+                        apex_method_name: val[2],
+                        arguments: val[4],
                         lineno: get_lineno(val, 1)
                       )
                     }
