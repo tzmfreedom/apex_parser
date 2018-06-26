@@ -9,8 +9,8 @@ module ApexParser
         @arguments ||= []
       end
 
-      def accept(visitor, local_scope)
-        visitor.visit_new(self, local_scope)
+      def accept(visitor)
+        visitor.visit_new(self)
       end
     end
   end

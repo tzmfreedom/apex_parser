@@ -3,8 +3,8 @@ module ApexParser
     class ForNode < Base
       attr_accessor :init_stmt, :exit_condition, :increment_stmt, :statements
 
-      def accept(visitor, local_scope)
-        visitor.visit_for(self, local_scope)
+      def accept(visitor)
+        visitor.visit_for(self)
       end
     end
   end

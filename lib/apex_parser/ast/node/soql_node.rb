@@ -2,8 +2,8 @@ module ApexParser
   class SoqlNode < Base
     attr_accessor :soql
 
-    def accept(visitor, local_scope)
-      visitor.visit_soql(self, local_scope)
+    def accept(visitor)
+      visitor.visit_soql(self)
     end
 
     def value

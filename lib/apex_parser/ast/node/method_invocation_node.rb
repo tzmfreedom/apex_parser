@@ -8,8 +8,8 @@ module ApexParser
         @arguments ||= []
       end
 
-      def accept(visitor, local_scope)
-        visitor.visit_call_method(self, local_scope)
+      def accept(visitor)
+        visitor.visit_method_invocation(self)
       end
     end
   end

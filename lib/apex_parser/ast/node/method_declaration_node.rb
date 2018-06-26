@@ -8,8 +8,8 @@ module ApexParser
         native
       end
 
-      def accept(visitor, local_scope)
-        visitor.visit_method(self, local_scope)
+      def accept(visitor)
+        visitor.visit_method(self)
       end
     end
   end

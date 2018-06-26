@@ -7,8 +7,8 @@ module ApexParser
         @name = name
       end
 
-      def accept(visitor, local_scope)
-        visitor.visit_annotation(self, local_scope)
+      def accept(visitor)
+        visitor.visit_annotation(self)
       end
     end
   end

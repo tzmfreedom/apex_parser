@@ -3,8 +3,8 @@ module ApexParser
     class BooleanNode < Base
       attr_accessor :value
 
-      def accept(visitor, local_scope)
-        visitor.visit_boolean(self, local_scope)
+      def accept(visitor)
+        visitor.visit_boolean(self)
       end
     end
   end

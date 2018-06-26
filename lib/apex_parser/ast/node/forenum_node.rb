@@ -3,8 +3,8 @@ module ApexParser
     class ForEnumNode < Base
       attr_accessor :type, :ident, :list, :statements
 
-      def accept(visitor, local_scope)
-        visitor.visit_forenum(self, local_scope)
+      def accept(visitor)
+        visitor.visit_forenum(self)
       end
     end
   end

@@ -3,8 +3,8 @@ module ApexParser
     class WhileNode < Base
       attr_accessor :condition_stmt, :statements
 
-      def accept(visitor, local_scope)
-        visitor.visit_while(self, local_scope)
+      def accept(visitor)
+        visitor.visit_while(self)
       end
     end
   end

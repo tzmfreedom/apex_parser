@@ -3,8 +3,8 @@ module ApexParser
     class ApexStringNode < Base
       attr_accessor :value
 
-      def accept(visitor, local_scope)
-        visitor.visit_string(self, local_scope)
+      def accept(visitor)
+        visitor.visit_string(self)
       end
     end
   end

@@ -3,8 +3,8 @@ module ApexParser
     class ApexIntegerNode < Base
       attr_accessor :value
 
-      def accept(visitor, local_scope)
-        visitor.visit_integer(self, local_scope)
+      def accept(visitor)
+        visitor.visit_integer(self)
       end
     end
   end

@@ -3,8 +3,8 @@ module ApexParser
     class OperatorNode < Base
       attr_accessor :type, :left, :operator, :right
 
-      def accept(visitor, local_scope)
-        visitor.visit_operator(self, local_scope)
+      def accept(visitor)
+        visitor.visit_operator(self)
       end
     end
   end

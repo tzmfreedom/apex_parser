@@ -3,8 +3,8 @@ module ApexParser
     class NullNode < Base
       def initialize; end
 
-      def accept(visitor, local_scope)
-        visitor.visit_null(self, local_scope)
+      def accept(visitor)
+        visitor.visit_null(self)
       end
 
       def value

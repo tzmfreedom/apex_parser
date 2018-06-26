@@ -3,8 +3,8 @@ module ApexParser
     class ReturnNode < Base
       attr_accessor :value, :expression
 
-      def accept(visitor, local_scope)
-        visitor.visit_return(self, local_scope)
+      def accept(visitor)
+        visitor.visit_return(self)
       end
     end
   end

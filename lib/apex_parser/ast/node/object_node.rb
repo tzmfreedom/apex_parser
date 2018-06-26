@@ -3,8 +3,8 @@ module ApexParser
     class ObjectNode < Base
       attr_accessor :apex_class_node, :arguments, :apex_instance_variables, :generics_node
 
-      def accept(visitor, local_scope)
-        visitor.visit_object(self, local_scope)
+      def accept(visitor)
+        visitor.visit_object(self)
       end
 
       def value
