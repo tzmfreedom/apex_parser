@@ -22,7 +22,7 @@ rule
 
 class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_implements LC_BRACE class_statements RC_BRACE
                   {
-                    result = AST::ApexClassNode.new(
+                    result = ApexClassInitializer.create(
                       modifiers: val[0],
                       name: value(val, 2),
                       statements: val[6],
@@ -66,7 +66,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
 
 constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
                         {
-                          result = AST::MethodDeclarationNode.new(
+                          result = AST::ConstructorDeclarationNode.new(
                             modifiers: val[0],
                             return_type: :void,
                             name: val[1],
@@ -340,6 +340,7 @@ end
 
 require 'apex_parser/apex_compiler.l'
 require 'apex_parser/util/hash_with_upper_cased_symbolic_key'
+require 'apex_parser/visitor/interpreter/apex_class_initializer'
 require 'apex_parser/ast/node/node'
 
 Dir[File.expand_path('./ast/node/**/*.rb', __dir__)].each do |f|

@@ -1,15 +1,19 @@
 module ApexParser
   module AST
     class MethodDeclarationNode < Base
-      attr_accessor :name, :access_level, :return_type,
-        :arguments, :statements, :apex_class_name, :native
+      attr_accessor :name, :modifiers, :return_type,
+        :arguments, :statements, :native, :call_proc
 
       def native?
         native
       end
 
+      def static?
+        modifiers.include?('static')
+      end
+
       def accept(visitor)
-        visitor.visit_method(self)
+        visitor.visit_method_declaration(self)
       end
     end
   end

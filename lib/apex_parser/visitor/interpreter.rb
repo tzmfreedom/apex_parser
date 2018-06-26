@@ -1,7 +1,7 @@
-require 'apex_parser/data_loader'
+require 'apex_parser/visitor/interpreter/data_loader'
 
 require 'apex_parser/visitor/interpreter/apex_class_table'
-require 'apex_parser/apex_class_creator'
+require 'apex_parser/visitor/interpreter/apex_class_creator'
 Dir[File.expand_path('./runtime/**/*.rb', __dir__)].each do |f|
   require f
 end
@@ -90,10 +90,10 @@ module ApexParser
           BooleanNode.new(node.left.accept(self).value < node.right.accept(self).value)
         when :>
           BooleanNode.new(node.left.accept(self).value > node.right.accept(self).value)
-        when :plus_plus
+        when :increment
           value = current_scope[node.left.name].value
           current_scope[node.left.name] = ApexIntegerNode.new(value + 1)
-        when :minus_minus
+        when :decrement
           value = current_scope[node.left.name].value
           current_scope[node.left.name] = ApexIntegerNode.new(value - 1)
         end
@@ -267,7 +267,7 @@ module ApexParser
 
       def execute_statement(method_node, must_return = true)
         if method_node.respond_to?(:native?) && method_node.native?
-          method_node.call(current_scope)
+          method_node.call_proc.call(current_scope)
         else
           method_node.statements.each do |statement|
             return_value = statement.accept(self)
