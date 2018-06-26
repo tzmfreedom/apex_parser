@@ -79,6 +79,8 @@ module ApexParser
         when :!=
           AST::BooleanNode.new(node.left.accept(self).value != node.right.accept(self).value)
         when :'!=='
+          AST::BooleanNode.new(node.left.accept(self).value != node.right.accept(self).value)
+        when :==
           AST::BooleanNode.new(node.left.accept(self).value == node.right.accept(self).value)
         when :===
           AST::BooleanNode.new(node.left.accept(self).value == node.right.accept(self).value)
@@ -90,24 +92,36 @@ module ApexParser
           AST::BooleanNode.new(node.left.accept(self).value < node.right.accept(self).value)
         when :>
           AST::BooleanNode.new(node.left.accept(self).value > node.right.accept(self).value)
-        when :increment
-          value = current_scope[node.left.name].value
-          current_scope[node.left.name] = AST::ApexIntegerNode.new(value + 1)
-        when :decrement
-          value = current_scope[node.left.name].value
-          current_scope[node.left.name] = AST::ApexIntegerNode.new(value - 1)
+        when :pre_increment
+          name = node.left.to_s
+          value = current_scope[name].value
+          current_scope[name] = AST::ApexIntegerNode.new(value: value + 1)
+        when :pre_decrement
+          name = node.left.to_s
+          value = current_scope[name].value
+          current_scope[name] = AST::ApexIntegerNode.new(value: value - 1)
+        when :post_increment
+          name = node.left.to_s
+          value = current_scope[name].value
+          current_scope[name] = AST::ApexIntegerNode.new(value: value + 1)
+          value
+        when :post_decrement
+          name = node.left.to_s
+          value = current_scope[name].value
+          current_scope[name] = AST::ApexIntegerNode.new(value: value - 1)
+          value
         end
       end
 
       def visit_for(node)
         push_scope({})
-        node.init_stmt.accept(self)
+        node.init_statement.accept(self)
 
         loop do
           break if node.exit_condition.accept(self).value == false
-          return_value = execute_statement(node, false)
+          return_value = execute_statements(node.statements)
           return return_value if return_value
-          node.increment_stmt.accept(self)
+          node.increment_statement.accept(self)
         end
         pop_scope
       end
@@ -257,6 +271,17 @@ module ApexParser
         result = execute_statement(method_node)
         pop_scope
         result
+      end
+
+      def execute_statements(statements)
+        statements.each do |statement|
+          return_value = statement.accept(self)
+          # TODO: return_value.value
+          if [AST::ReturnNode, AST::ContinueNode, AST::BreakNode].include?(return_value.class)
+            return return_value.value
+          end
+        end
+        nil
       end
 
       def execute_statement(method_node, must_return = true)

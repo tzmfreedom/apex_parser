@@ -23,5 +23,17 @@ public class Hoge extends HogeSuper{
         System.debug(new Hoge());
         Hoge h = new Hoge();
         System.debug(h.foo(1234));
+
+        if (1 == 2) {
+            System.debug('hoge');
+        } else if (false) {
+            System.debug('fuga');
+        } else if (true) {
+            System.debug('piyp');
+        }
+
+        for (Integer i = 0; i < 10; i++) {
+            System.debug(i);
+        }
     }
 }

@@ -153,43 +153,43 @@ assignment : left_hand_side ASSIGN assignment_expression
 
 
   conditional_expression : conditional_or_expression
-                         | conditional_or_expression QUESTION expression COLON conditional_expression { result = AST::OperationNode.new(type: :'?', left: val[0], right: val[2]) }
+                         | conditional_or_expression QUESTION expression COLON conditional_expression { result = AST::OperatorNode.new(type: :'?', left: val[0], right: val[2]) }
   conditional_or_expression : conditional_and_expression
-                            | conditional_or_expression CONDITIONAL_OR conditional_and_expression { result = AST::OperationNode.new(type: :'||', left: val[0], right: val[2]) }
+                            | conditional_or_expression CONDITIONAL_OR conditional_and_expression { result = AST::OperatorNode.new(type: :'||', left: val[0], right: val[2]) }
 
   conditional_and_expression : inclusive_expression
-                             | conditional_and_expression CONDITIONAL_AND inclusive_expression { result = AST::OperationNode.new(type: :'&&', left: val[0], right: val[2]) }
+                             | conditional_and_expression CONDITIONAL_AND inclusive_expression { result = AST::OperatorNode.new(type: :'&&', left: val[0], right: val[2]) }
 
   inclusive_expression : exclusive_expression
-                       | inclusive_expression OR exclusive_expression { result = AST::OperationNode.new(type: :|, left: val[0], right: val[2]) }
+                       | inclusive_expression OR exclusive_expression { result = AST::OperatorNode.new(type: :|, left: val[0], right: val[2]) }
 
   exclusive_expression : and_expression
-                       | exclusive_expression TILDE and_expression { result = AST::OperationNode.new(type: :~, left: val[0], right: val[2]) }
+                       | exclusive_expression TILDE and_expression { result = AST::OperatorNode.new(type: :~, left: val[0], right: val[2]) }
 
 and_expression : equality_expression
-               | and_expression AND equality_expression { result = AST::OperationNode.new(type: :&, left: val[0], right: val[2]) }
+               | and_expression AND equality_expression { result = AST::OperatorNode.new(type: :&, left: val[0], right: val[2]) }
 
 
 equality_expression : relational_expression
-                    | equality_expression EQUAL relational_expression { result = AST::OperationNode.new(type: :==, left: val[0], right: val[2]) }
-                    | equality_expression NOT_EQUAL relational_expression { result = AST::OperationNode.new(type: :!=, left: val[0], right: val[2]) }
+                    | equality_expression EQUAL relational_expression { result = AST::OperatorNode.new(type: :==, left: val[0], right: val[2]) }
+                    | equality_expression NOT_EQUAL relational_expression { result = AST::OperatorNode.new(type: :!=, left: val[0], right: val[2]) }
 
 relational_expression : shift_expression
-                      | relational_expression LESS_THAN shift_expression { result = AST::OperationNode.new(type: :<, left: val[0], right: val[2]) }
-                      | relational_expression LESS_THAN_EQUAL shift_expression { result = AST::OperationNode.new(type: :<=, left: val[0], right: val[2]) }
-                      | relational_expression GREATER_THAN shift_expression { result = AST::OperationNode.new(type: :>, left: val[0], right: val[2]) }
-                      | relational_expression GREATER_THAN_EQUAL shift_expression { result = AST::OperationNode.new(type: :>=, left: val[0], right: val[2]) }
+                      | relational_expression LESS_THAN shift_expression { result = AST::OperatorNode.new(type: :<, left: val[0], right: val[2]) }
+                      | relational_expression LESS_THAN_EQUAL shift_expression { result = AST::OperatorNode.new(type: :<=, left: val[0], right: val[2]) }
+                      | relational_expression GREATER_THAN shift_expression { result = AST::OperatorNode.new(type: :>, left: val[0], right: val[2]) }
+                      | relational_expression GREATER_THAN_EQUAL shift_expression { result = AST::OperatorNode.new(type: :>=, left: val[0], right: val[2]) }
 
 shift_expression : additive_expression
-                 | shift_expression LEFT_SHIFT additive_expression { result = AST::OperationNode.new(type: :<<, left: val[0], right: val[2]) }
-                 | shift_expression RIGHT_SHIFT additive_expression { result = AST::OperationNode.new(type: :>>, left: val[0], right: val[2]) }
+                 | shift_expression LEFT_SHIFT additive_expression { result = AST::OperatorNode.new(type: :<<, left: val[0], right: val[2]) }
+                 | shift_expression RIGHT_SHIFT additive_expression { result = AST::OperatorNode.new(type: :>>, left: val[0], right: val[2]) }
 additive_expression : multiplicative_expression
-                    | additive_expression ADD multiplicative_expression { result = AST::OperationNode.new(type: :+, left: val[0], right: val[2]) }
-                    | additive_expression SUB multiplicative_expression { result = AST::OperationNode.new(type: :-, left: val[0], right: val[2]) }
+                    | additive_expression ADD multiplicative_expression { result = AST::OperatorNode.new(type: :+, left: val[0], right: val[2]) }
+                    | additive_expression SUB multiplicative_expression { result = AST::OperatorNode.new(type: :-, left: val[0], right: val[2]) }
 multiplicative_expression : unary_expression
-                          | multiplicative_expression MUL unary_expression { result = AST::OperationNode.new(type: :*, left: val[0], right: val[2]) }
-                          | multiplicative_expression DIV unary_expression { result = AST::OperationNode.new(type: :'/', left: val[0], right: val[2]) }
-                          | multiplicative_expression MOD unary_expression { result = AST::OperationNode.new(type: :%, left: val[0], right: val[2]) }
+                          | multiplicative_expression MUL unary_expression { result = AST::OperatorNode.new(type: :*, left: val[0], right: val[2]) }
+                          | multiplicative_expression DIV unary_expression { result = AST::OperatorNode.new(type: :'/', left: val[0], right: val[2]) }
+                          | multiplicative_expression MOD unary_expression { result = AST::OperatorNode.new(type: :%, left: val[0], right: val[2]) }
 
   unary_expression : pre_increment_expression
                    | pre_decrement_expression
@@ -200,10 +200,10 @@ multiplicative_expression : unary_expression
                      | name
                      | primary_expression
 
-pre_increment_expression : INCR unary_expression { result = AST::OperationNode.new(type: :pre_increment, left: val[0]) }
-pre_decrement_expression : DECR unary_expression { result = AST::OperationNode.new(type: :pre_decrement, left: val[0]) }
-post_increment_expression : postfix_expression INCR { result = AST::OperationNode.new(type: :post_increment, left: val[0]) }
-post_decrement_expression : postfix_expression DECR { result = AST::OperationNode.new(type: :post_decrement, left: val[0]) }
+pre_increment_expression : INCR unary_expression { result = AST::OperatorNode.new(type: :pre_increment, left: val[0]) }
+pre_decrement_expression : DECR unary_expression { result = AST::OperatorNode.new(type: :pre_decrement, left: val[0]) }
+post_increment_expression : postfix_expression INCR { result = AST::OperatorNode.new(type: :post_increment, left: val[0]) }
+post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode.new(type: :post_decrement, left: val[0]) }
 
   primary_expression : method_invocation
                      | array_access
@@ -298,12 +298,19 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
                           | else_statements
   else_statements : ELSE LC_BRACE statements RC_BRACE { result = val[2] }
                  | ELSE statement { result = [val[1]] }
-  for_statement : FOR L_BRACE empty_or_variable_declarators SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
+  for_statement : FOR L_BRACE empty_or_variable_declaration SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
                   | FOR L_BRACE name simple_name COLON name R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
-  empty_or_variable_declarators :
+  empty_or_variable_declaration :
                                 | name variable_declarators
+                                 {
+                                   result = AST::OperatorNode.new(
+                                     type: :declaration,
+                                     left: val[0],
+                                     right: val[1]
+                                   )
+                                 }
   while_statement : WHILE L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::WhileNode.new(condition_statement: val[2], statements: val[5]) }
 
@@ -320,7 +327,8 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
 
   break_statement : BREAK SEMICOLON { result = AST::BreakNode.new }
   continue_statement : CONTINUE SEMICOLON { result = AST::ContinueNode.new }
-  return_statement : RETURN expression SEMICOLON { result = AST::ReturnNode.new(expression: val[1]) }
+  return_statement : RETURN SEMICOLON { result = AST::ReturnNode.new(expression: AST::NullNode.new) }
+                   | RETURN expression SEMICOLON { result = AST::ReturnNode.new(expression: val[1]) }
 
   comment : COMMENT { result = AST::CommentNode.new(val[0]) }
           | REM_IN COMMENT REM_OUT { result = AST::CommentNode.new(val[1]) }
