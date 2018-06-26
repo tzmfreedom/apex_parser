@@ -8,7 +8,8 @@ module ApexParser
 
         class << self
           def register(name, apex_class)
-            (@apex_classes ||= HashWithUpperCasedSymbolicKey.new)[name] = apex_class
+            @apex_classes ||= HashWithUpperCasedSymbolicKey.new
+            @apex_classes[name] = { _top: apex_class }
           end
 
           def [](name)

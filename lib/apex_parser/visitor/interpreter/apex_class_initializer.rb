@@ -10,12 +10,12 @@ module ApexParser
         implements:,
         lineno:
     )
-      instance_methods = {}
-      static_methods   = {}
-      instance_fields  = {}
-      static_fields    = {}
-      annotations      = {}
-      other_modifiers  = {}
+      instance_methods = HashWithUpperCasedSymbolicKey.new
+      static_methods   = HashWithUpperCasedSymbolicKey.new
+      instance_fields  = HashWithUpperCasedSymbolicKey.new
+      static_fields    = HashWithUpperCasedSymbolicKey.new
+      annotations      = HashWithUpperCasedSymbolicKey.new
+      other_modifiers  = HashWithUpperCasedSymbolicKey.new
       constructor      = nil
       access_modifier  = nil
 

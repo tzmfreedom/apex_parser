@@ -55,10 +55,10 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                     }
   field_declarators : field_declarator { result = [val[0]] }
                     | field_declarators COLON field_declarator { result = val[0].push(val[2]) }
-  field_declarator : simple_name { result = AST::FieldDeclarator.new(name: val[0]) }
-                   | simple_name ASSIGN expression { result= AST::FieldDeclarator.new(name: val[0], expression: val[2]) }
+  field_declarator : simple_name { result = AST::FieldDeclarator.new(name: val[0].to_s, expression: AST::NullNode.new) }
+                   | simple_name ASSIGN expression { result= AST::FieldDeclarator.new(name: val[0].to_s, expression: val[2]) }
                    | simple_name LC_BRACE getter_setter RC_BRACE
-                   { result = AST::FieldDeclarator.new(name: val[0], expression: val[2]) }
+                   { result = AST::FieldDeclarator.new(name: val[0].to_s, expression: val[2]) }
   getter_setter : getter setter
                 | setter getter
   getter : GET SEMICOLON
@@ -90,7 +90,7 @@ empty_or_parameters :
                      | parameters
   parameters: parameter { result = [val[0]] }
             | parameters COMMA parameter { result = val[0].push(val[2]) }
-parameter : name simple_name { result = AST::ArgumentNode.new(type: val[0], name: val[1]) }
+parameter : name simple_name { result = AST::ArgumentNode.new(type: val[0], name: val[1].to_s) }
 
 empty_or_modifiers :
                    | modifiers
@@ -227,7 +227,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
   variable_declaration : name variable_declarators SEMICOLON
                        {
                          result = AST::OperatorNode.new(
-                           type: :define,
+                           type: :declaration,
                            left: val[0],
                            right: val[1]
                          )
@@ -237,16 +237,14 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
   variable_declarator : name
                        {
                          result = AST::VariableDeclaratorNode.new(
-                           type: :define,
                            left: val[0],
-                           right: NullNode.new,
+                           right: AST::NullNode.new,
                            lineno: val[0].lineno
                          )
                        }
                       | name ASSIGN expression
                       {
-                        result = AST::OperatorNode.new(
-                          type: :define,
+                        result = AST::VariableDeclaratorNode.new(
                           left: val[0],
                           right: val[2],
                           lineno: val[0].lineno
@@ -290,7 +288,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
                    }
   new_expression : NEW name L_BRACE empty_or_arguments R_BRACE
                  {
-                   result = AST::NewNode.new(apex_class_name: value(val, 1), arguments: val[3])
+                   result = AST::NewNode.new(apex_class_name: val[1], arguments: val[3])
                  }
   if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
                {

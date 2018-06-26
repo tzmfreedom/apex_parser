@@ -7,7 +7,7 @@ module ApexParser
         super
 
         self.type =
-          case type
+          case type.to_s.to_sym
           when :Integer
             ApexIntegerNode
           when :Double

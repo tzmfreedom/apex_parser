@@ -1,8 +1,14 @@
 #!/usr/bin/env ruby
 
+require 'apex_parser/apex_compiler'
 require 'apex_parser/visitor/interpreter'
 require 'json'
 require 'optparse'
+
+require 'apex_parser/visitor/interpreter/apex_class_creator'
+Dir[File.expand_path('../lib/apex_parser/runtime/*.rb', __dir__)].each do |f|
+  require f
+end
 
 Bundler.require
 
@@ -34,8 +40,8 @@ end
 return if show_ast
 
 call_method_node = ApexParser::AST::MethodInvocationNode.new(
-  receiver: ApexParser::AST::NameNode.new(name: [:Hoge]),
+  receiver: ApexParser::AST::NameNode.new(value: [:Hoge]),
   arguments: [],
   apex_method_name: :action
 )
-call_method_node.accept(interpreter, {})
+call_method_node.accept(interpreter)

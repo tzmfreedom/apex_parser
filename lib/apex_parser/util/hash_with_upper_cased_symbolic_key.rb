@@ -15,6 +15,10 @@ module ApexParser
       @env[key.upcase.to_sym]
     end
 
+    def include?(key)
+      @env.include?(key.upcase.to_sym)
+    end
+
     def map(&block)
       @env.map(&block)
     end

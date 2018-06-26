@@ -1,7 +1,7 @@
 module ApexParser
   module AST
     class ObjectNode < Base
-      attr_accessor :apex_class_node, :arguments, :apex_instance_variables, :generics_node
+      attr_accessor :apex_class_node, :arguments, :instance_fields, :generics_node
 
       def accept(visitor)
         visitor.visit_object(self)

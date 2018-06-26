@@ -7,16 +7,21 @@ public class Hoge extends HogeSuper{
     }
 
     public Integer foo(Integer c){
-        System.debug(100);
+        System.debug(1000);
+        return c;
     }
 
     @aaa
-    public static Integer action() {
+    public static void action() {
         System.debug('*** variable test assign***');
         Integer b = 100;
         System.debug(b);
         Integer a = b = 20;
         System.debug(a);
         System.debug(b);
+
+        System.debug(new Hoge());
+        Hoge h = new Hoge();
+        System.debug(h.foo(1234));
     }
 }

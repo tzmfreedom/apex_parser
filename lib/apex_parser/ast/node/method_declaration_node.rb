@@ -7,7 +7,9 @@ module ApexParser
       def initialize(*args)
         super
 
-        @modifiers ||= []
+        @modifiers  ||= []
+        @statements ||= []
+        @arguments  ||= []
       end
 
       def native?

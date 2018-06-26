@@ -8,7 +8,7 @@ module ApexParser
       end
 
       def accept(visitor)
-        visitor.visit_string(self)
+        visitor.visit_name(self)
       end
     end
   end
