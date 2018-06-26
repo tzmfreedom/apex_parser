@@ -1,7 +1,7 @@
 module ApexParser
   module AST
     class OperatorNode < Base
-      attr_accessor :type, :left, :operator, :right
+      attr_accessor :type, :left, :right
 
       def accept(visitor)
         visitor.visit_operator(self)

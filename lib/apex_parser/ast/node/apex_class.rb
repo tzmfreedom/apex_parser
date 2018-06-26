@@ -3,7 +3,7 @@ module ApexParser
     class ApexClassNode < Base
       attr_accessor :modifiers, :name, :access_modifier, :annotations,
         :instance_fields, :instance_methods, :constructor,
-        :static_fields, :static_fields,
+        :static_fields, :static_methods,
         :apex_super_class, :implements
 
       def accept(visitor)

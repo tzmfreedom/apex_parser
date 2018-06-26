@@ -7,7 +7,7 @@ ast: $(COMPILER_PATH)
 
 .PHONY: test
 test: $(COMPILER_PATH)
-	@time bundle exec rapis
+	@time bundle exec rapis examples/sample.cls
 
 $(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)
 	bundle exec racc src/apex.racc.rb -v -o $(COMPILER_PATH)
@@ -15,7 +15,11 @@ $(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)
 $(LEXOR_PATH): src/apex.rex.rb
 	bundle exec rex src/apex.rex.rb -i -o $(LEXOR_PATH)
 
-.PHONY: test
+.PHONY: build
+build:
+	bundle exec racc src/apex.racc.rb -v -o $(COMPILER_PATH)
+
+.PHONY: debug
 debug:
 	bundle exec racc src/apex.racc.rb -g -v -o $(COMPILER_PATH)
 	$(MAKE) test

@@ -19,7 +19,7 @@ module ApexParser
           when :Object
             AnyObject
           else
-            ApexObjectNode
+            ObjectNode
           end
       end
     end

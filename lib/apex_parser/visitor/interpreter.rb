@@ -191,7 +191,7 @@ module ApexParser
 
       def visit_new(node)
         apex_class_node, generics_node = parse_type(node.apex_class_name)
-        object_node = ApexObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
+        object_node = AST::ObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
         object_node.generics_node = generics_node
         # assign instance variables
         object_node.apex_instance_variables = HashWithUpperCasedSymbolicKey.new(apex_class_node.apex_instance_variables.map do |variable_name, variable_node|
@@ -460,6 +460,10 @@ module ApexParser
             return receiver
           end
         end
+      end
+
+      def visit_object(node)
+        node
       end
 
       def current_scope

@@ -19,6 +19,8 @@ module ApexParser
     class << self
       attr_accessor :attributes
 
+      @attributes ||= []
+
       def attr_accessor(*args)
         (@attributes ||= []).concat(args)
         super

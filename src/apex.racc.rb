@@ -49,7 +49,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                       result = AST::FieldDeclarationNode.new(
                         modifiers: val[0],
                         type: val[1],
-                        expression: val[2],
+                        statements: val[2],
                         lineno: val[1].lineno
                       )
                     }
@@ -69,7 +69,7 @@ constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parame
                           result = AST::ConstructorDeclarationNode.new(
                             modifiers: val[0],
                             return_type: :void,
-                            name: val[1],
+                            name: val[1].to_s,
                             arguments: val[3],
                             statements: val[6],
                             lineno: val[1].lineno
@@ -80,7 +80,7 @@ method_declaration : empty_or_modifiers name simple_name L_BRACE empty_or_parame
                      result = AST::MethodDeclarationNode.new(
                        modifiers: val[0],
                        return_type: val[1],
-                       name: val[2],
+                       name: val[2].to_s,
                        arguments: val[4],
                        statements: val[7],
                        lineno: val[1].lineno
@@ -90,12 +90,12 @@ empty_or_parameters :
                      | parameters
   parameters: parameter { result = [val[0]] }
             | parameters COMMA parameter { result = val[0].push(val[2]) }
-parameter : name simple_name { result = AST::ArgumentNode.new(type: value(val, 0), name: value(val, 1)) }
+parameter : name simple_name { result = AST::ArgumentNode.new(type: val[0], name: val[1]) }
 
 empty_or_modifiers :
                    | modifiers
 modifiers : modifier { result = [value(val, 0)] }
-          | modifiers modifier { result = val[0].push(val[1]) }
+          | modifiers modifier { result = val[0].push(value(val,1)) }
 modifier : ANNOTATION
          | ABSTRACT
          | FINAL
@@ -104,8 +104,8 @@ modifier : ANNOTATION
          | PUBLIC
          | PRIVATE
          | PROTECTED
-         | WITH SHARING { result = :with_sharing }
-         | WITHOUT SHARING { result = :without_sharing }
+         | WITH SHARING { result = ['with_sharing', get_lineno(val, 0)] }
+         | WITHOUT SHARING { result = ['without_sharing', get_lineno(val, 0)] }
 
 trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements RC_BRACE
 
@@ -232,19 +232,11 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperationNod
                            right: val[1]
                          )
                        }
-  variable_declarators : variable_declarator
-                       | variable_declarators COMMA variable_declarator
-                       {
-                         result = AST::OperatorNode.new(
-                           type: :define,
-                           left: val[0],
-                           right: AST::NullNode.new,
-                           lineno: val[0].lineno
-                         )
-                       }
+  variable_declarators : variable_declarator { result = [val[0]] }
+                       | variable_declarators COMMA variable_declarator { result = val[0].push(val[2]) }
   variable_declarator : name
                        {
-                         result = AST::OperatorNode.new(
+                         result = AST::VariableDeclaratorNode.new(
                            type: :define,
                            left: val[0],
                            right: NullNode.new,

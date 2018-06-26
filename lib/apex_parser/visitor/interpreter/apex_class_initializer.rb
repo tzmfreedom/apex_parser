@@ -31,9 +31,13 @@ module ApexParser
           end
         when AST::FieldDeclarationNode
           if statement.static?
-            static_fields[statement.name] = statement
+            statement.statements.each do |statement|
+              static_fields[statement.name] = statement.expression
+            end
           else
-            instance_fields[statement.name] = statement
+            statement.statements.each do |statement|
+              instance_fields[statement.name] = statement.expression
+            end
           end
         end
       end
@@ -41,12 +45,12 @@ module ApexParser
       modifiers.each do |modifier|
         case modifier
         when AST::AnnotationNode
-          annotations[modifier.name] = modifier
+          annotations[modifier] = modifier
         else
-          if %w[public private protected].include?(modifiers.name)
+          if %w[public private protected].include?(modifier)
             access_modifier = modifier
           else
-            other_modifiers[modifier.name] = modifier
+            other_modifiers[modifier] = modifier
           end
         end
       end
