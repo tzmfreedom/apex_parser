@@ -19,7 +19,7 @@ module ApexParser
   class CsvAdapter
     def call(soql)
       object_name = soql
-      file = File.expand_path("../../data/#{object_name}.csv", __dir__)
+      file = File.expand_path("../../../../data/#{object_name}.csv", __dir__)
       return unless File.exists?(file)
 
       CSV.foreach(file, headers: :first_row, skip_blanks: true).map do |row|
@@ -31,7 +31,7 @@ module ApexParser
   class JsonAdapter
     def call(soql)
       object_name = soql
-      file = File.expand_path("../../data/#{object_name}.json", __dir__)
+      file = File.expand_path("../../../../data/#{object_name}.json", __dir__)
       return unless File.exists?(file)
 
       records = JSON.load(File.open(file))

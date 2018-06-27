@@ -23,6 +23,7 @@ rule
       \)                        { [:R_BRACE, [text, lineno]] }
       '[^']*'                   { [:STRING, [text[1..-2], lineno]] }
       @\w+                      { [:ANNOTATION, [text, lineno]] }
+      testMethod{DELIM_BLANK}   { [:TEST_METHOD, [text, lineno]] }
       select{DELIM_BLANK}       { [:SELECT, [text, lineno]] }
       from{DELIM_BLANK}         { [:FROM, [text, lineno]] }
       try(?=[\s\{])             { [:TRY, [text, lineno]] }

@@ -14,6 +14,7 @@ module ApexParser
       NULL = Object.new
 
       def initialize
+        @environment_stack = []
         push_scope({})
       end
 
@@ -152,7 +153,7 @@ module ApexParser
 
       def visit_forenum(node)
         push_scope({})
-        list_node = current_scope[node.list.name]
+        list_node = node.expression.accept(self)
         next_method = search_instance_method(list_node.apex_class_node, :next)
         has_next_method= search_instance_method(list_node.apex_class_node, :has_next)
 
@@ -167,9 +168,10 @@ module ApexParser
           env = HashWithUpperCasedSymbolicKey.new({ this: list_node })
           push_scope(env, nil)
           next_return_value = execute_statement(next_method)
-          current_scope[node.ident.name] = next_return_value
-          return_value = execute_statement(node, false)
           pop_scope
+
+          current_scope[node.ident.to_s] = next_return_value
+          return_value = execute_statements(node.statements)
 
           case return_value
           when AST::ReturnNode
@@ -226,17 +228,17 @@ module ApexParser
         end.to_h)
 
         # constructor
-        instance_method_node = apex_class_node.instance_fields[apex_class_node.name]
-        return object_node unless instance_method_node
+        constructor_node = apex_class_node.constructor
+        return object_node unless constructor_node
 
         # check constructor argument
-        env = check_argument(instance_method_node, node.arguments)
+        env = check_argument(constructor_node, node.arguments)
         return unless env
 
         # execute constructor argument
         env[:this] = object_node
         push_scope(env)
-        execute_statement(instance_method_node, false)
+        execute_statement(constructor_node, false)
         pop_scope
         object_node
       end
@@ -538,16 +540,15 @@ module ApexParser
       end
 
       def current_scope
-        @current_scope
+        @environment_stack.last
       end
 
-      def push_scope(env, parent = @current_scope)
-        scope = LocalEnvironment.new(env, parent)
-        @current_scope = scope
+      def push_scope(env, parent = current_scope)
+        @environment_stack.push(LocalEnvironment.new(env, parent))
       end
 
       def pop_scope
-        @current_scope = current_scope.parent
+        @environment_stack.pop
       end
     end
   end

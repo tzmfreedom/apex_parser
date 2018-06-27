@@ -10,7 +10,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV MOD ADD SUB DOUBLE
   NULL CONTINUE BREAK SELECT FROM
   LS_BRACE RS_BRACE TRY CATCH INCR DECR
   LEFT_SHIFT RIGHT_SHIFT
-  AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION SWITCH WHEN
+  AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION SWITCH WHEN TEST_METHOD
 
 rule
   root_statements : class_or_trigger { result = [val[0]] }
@@ -51,6 +51,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                         lineno: val[1].lineno
                       )
                     }
+                    | empty_or_modifiers type simple_name LC_BRACE getter_setter RC_BRACE
   field_declarators : field_declarator { result = [val[0]] }
                     | field_declarators COLON field_declarator { result = val[0].push(val[2]) }
   field_declarator : simple_name { result = AST::FieldDeclarator.new(name: val[0].to_s, expression: AST::NullNode.new) }
@@ -62,7 +63,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
   getter : GET SEMICOLON
   setter : SET SEMICOLON
 
-constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
+constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE empty_or_statements RC_BRACE
                         {
                           result = AST::ConstructorDeclarationNode.new(
                             modifiers: val[0],
@@ -102,6 +103,7 @@ modifier : ANNOTATION
          | PUBLIC
          | PRIVATE
          | PROTECTED
+         | TEST_METHOD
          | WITH SHARING { result = ['with_sharing', get_lineno(val, 0)] }
          | WITHOUT SHARING { result = ['without_sharing', get_lineno(val, 0)] }
 
@@ -123,6 +125,8 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE before_after_arguments R_BR
       | UPSERT
       | DELETE
       | UNDELETE
+empty_or_statements :
+                    | statements
   statements : statement { result = [val[0]] }
              | statements statement { result = val[0].push(val[1]) }
   statement : variable_declaration
@@ -229,7 +233,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                      | literal
                      | field_access
                      | new_expression
-                     | NULL { result = AST::NullNode.new(lineno: get_lineno(val, 0)) }
+                     | NULL { result = AST::NullNode.new }
 
   literal : string_expression
           | boolean
@@ -292,6 +296,11 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
             | arguments COMMA expression { result = val[0].push(val[2]) }
 
   type : name
+       | name LS_BRACE RS_BRACE { result = val[0].value.push('[]') }
+       | type generics
+  types : type
+        | types COMMA type
+  generics : LESS_THAN types GREATER_THAN
   name : simple_name
        | qualified_name
   simple_name: IDENT { result = AST::NameNode.new(value: [value(val, 0)], lineno: get_lineno(val, 0)) }
@@ -305,10 +314,12 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                    {
                      result = AST::SoqlNode.new(soql: val[4])
                    }
-  new_expression : NEW type L_BRACE empty_or_arguments R_BRACE
+  new_expression : NEW type L_BRACE empty_or_arguments R_BRACE empty_or_initialize_parameter
                  {
                    result = AST::NewNode.new(apex_class_name: val[1], arguments: val[3])
                  }
+  empty_or_initialize_parameter :
+                                | LC_BRACE empty_or_arguments RC_BRACE
   if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
                {
                  result = AST::IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
@@ -330,8 +341,8 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                 | when_literals COMMA literal { result = val[0].push(val[2]) }
   for_statement : FOR L_BRACE empty_or_variable_declaration SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
-                  | FOR L_BRACE name simple_name COLON name R_BRACE LC_BRACE statements RC_BRACE
-                  { result = AST::ForEnumNode.new(type: val[2], ident: val[3], list: val[5], statements: val[8]) }
+                  | FOR L_BRACE name simple_name COLON expression R_BRACE LC_BRACE statements RC_BRACE
+                  { result = AST::ForEnumNode.new(type: val[2], ident: val[3], expression: val[5], statements: val[8]) }
   empty_or_variable_declaration :
                                 | name variable_declarators
                                  {

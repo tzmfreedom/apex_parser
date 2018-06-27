@@ -3,7 +3,7 @@ public class Hoge extends HogeSuper {
     public Integer b = 1;
 
     public Hoge (){
-        System.debug(100);
+        System.debug(112312312300);
     }
 
     public Integer foo(Integer c){
@@ -30,6 +30,25 @@ public class Hoge extends HogeSuper {
         System.debug(new Hoge());
         System.debug(h.foo(1234));
         System.debug(h.aaa());
+
+        List l = new List();
+        l.add(1);
+        l.add(2);
+        System.debug(l.get(1));
+        System.debug(l.get(0));
+
+        Map m = new Map();
+        m.put('A', 'B');
+        m.put('C', 'D');
+        System.debug(m.get('A'));
+        System.debug(m.get('C'));
+
+        List accounts = [SELECT id FROM Account];
+        System.debug(accounts);
+
+        for (Account acc : accounts) {
+            System.debug(acc);
+        }
 
         if (1 == 2) {
             System.debug('hoge');
