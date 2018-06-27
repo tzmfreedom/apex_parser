@@ -50,28 +50,30 @@ module ApexParser
           node.right.each do |statement|
             current_scope[statement.left.to_s] = statement.right.accept(self)
           end
-        when :add
-          AST::ApexIntegerNode.new(node.left.accept(self).value + node.right.accept(self).value)
-        when :sub
-          AST::ApexIntegerNode.new(node.left.accept(self).value - node.right.accept(self).value)
-        when :div
-          AST::ApexIntegerNode.new(node.left.accept(self).value / node.right.accept(self).value)
-        when :mul
-          AST::ApexIntegerNode.new(node.left.accept(self).value * node.right.accept(self).value)
+        when :+
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value + node.right.accept(self).value)
+        when :-
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value - node.right.accept(self).value)
+        when :/
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value / node.right.accept(self).value)
+        when :*
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value * node.right.accept(self).value)
+        when :%
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value % node.right.accept(self).value)
         when :<<
-          AST::ApexIntegerNode.new(node.left.accept(self).value << node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value << node.right.accept(self).value)
         when :'<<<'
-          AST::ApexIntegerNode.new(node.left.accept(self).value << node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value << node.right.accept(self).value)
         when :>>
-          AST::ApexIntegerNode.new(node.left.accept(self).value >> node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value >> node.right.accept(self).value)
         when :'>>>'
-          AST::ApexIntegerNode.new(node.left.accept(self).value >> node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value >> node.right.accept(self).value)
         when :&
-          AST::ApexIntegerNode.new(node.left.accept(self).value && node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value && node.right.accept(self).value)
         when :|
-          AST::ApexIntegerNode.new(node.left.accept(self).value | node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value | node.right.accept(self).value)
         when :^
-          AST::ApexIntegerNode.new(node.left.accept(self).value ^ node.right.accept(self).value)
+          AST::ApexIntegerNode.new(value: node.left.accept(self).value ^ node.right.accept(self).value)
         when :'&&'
           AST::BooleanNode.new(node.left.accept(self).value && node.right.accept(self).value)
         when :'||'
@@ -110,6 +112,8 @@ module ApexParser
           value = current_scope[name].value
           current_scope[name] = AST::ApexIntegerNode.new(value: value - 1)
           value
+        else
+          puts 'No Operation Error'
         end
       end
 
@@ -130,8 +134,8 @@ module ApexParser
         push_scope({})
 
         loop do
-          break if node.condition_stmt.accept(self).value == false
-          return_value = execute_statement(node, false)
+          break if node.condition_statement.accept(self).value == false
+          return_value = execute_statements(node.statements)
           return return_value if return_value
         end
         pop_scope
@@ -363,11 +367,7 @@ module ApexParser
       end
 
       def visit_name(node)
-        if node
-          field_from_name(node)
-        else
-          receiver_from_name(node)
-        end
+        current_scope[node.to_s]
       end
 
       def field_from_name(node)

@@ -35,5 +35,11 @@ public class Hoge extends HogeSuper{
         for (Integer i = 0; i < 10; i++) {
             System.debug(i);
         }
+
+        Integer i = 0;
+        while (i < 4) {
+            System.debug(i+5);
+            i++;
+        }
     }
 }

@@ -11,19 +11,8 @@ module ApexParser
     attr_accessor :lineno
 
     def initialize(args = {})
-      self.class.attributes.each do |attr|
-        public_send("#{attr}=", args[attr])
-      end
-    end
-
-    class << self
-      attr_accessor :attributes
-
-      @attributes ||= []
-
-      def attr_accessor(*args)
-        (@attributes ||= []).concat(args)
-        super
+      args.each do |key, value|
+        public_send("#{key}=", value)
       end
     end
   end
