@@ -3,11 +3,11 @@ LEXOR_PATH := lib/apex_parser/apex_compiler.l.rb
 
 .PHONY: test
 test: $(COMPILER_PATH)
-	@time bundle exec rapis examples/sample.cls
+	@time bundle exec rapis examples
 
 .PHONY: ast
 ast: $(COMPILER_PATH)
-	@bundle exec rapis -s examples/sample.cls
+	@bundle exec rapis -s examples
 
 
 $(COMPILER_PATH): src/apex.racc.rb $(LEXOR_PATH)

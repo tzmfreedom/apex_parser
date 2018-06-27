@@ -459,7 +459,7 @@ module ApexParser
             receiver.instance_fields[name]
           end
 
-          method_node = receiver.apex_class_node.instance_methods[method_name]
+          method_node = receiver.apex_class_node.search_instance_method(method_name)
           return [receiver, method_node] if receiver && method_node
         end
 
@@ -472,7 +472,7 @@ module ApexParser
               receiver.instance_fields[name]
             end
 
-            method_node = receiver.instance_methods[method_name]
+            method_node = receiver.search_instance_method(method_name)
             return [receiver, method_node] if receiver && method_node
           end
         end
@@ -482,7 +482,7 @@ module ApexParser
           class_info = ApexClassTable[name]
           if class_info
             apex_class = class_info[:_top]
-            method_node = apex_class.static_methods[method_name]
+            method_node = apex_class.search_static_method(method_name)
             return [apex_class, method_node] unless method_node.nil?
           end
         end
@@ -498,7 +498,7 @@ module ApexParser
               break nil if receiver.nil?
               receiver.instance_fields[name]
             end
-            unless receiver.nil? && apex_class.instance_methods[method_name]
+            unless receiver.nil? && apex_class.search_instance_method(method_name)
               return receiver
             end
           end
@@ -514,7 +514,7 @@ module ApexParser
             break nil if receiver.nil?
             receiver.instance_fields[name]
           end
-          unless receiver.nil? && apex_class.instance_methods[method_name]
+          unless receiver.nil? && apex_class.search_instance_method(method_name)
             return receiver
           end
         end

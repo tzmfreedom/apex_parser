@@ -1,4 +1,4 @@
-public class Hoge extends HogeSuper{
+public class Hoge extends HogeSuper {
     public Integer a;
     public Integer b = 1;
 
@@ -26,6 +26,8 @@ public class Hoge extends HogeSuper{
 /*
         System.debug(new Hoge());
         System.debug(h.foo(1234));
+        System.debug(h.aaa());
+        System.debug(h.bbb());
 
         if (1 == 2) {
             System.debug('hoge');

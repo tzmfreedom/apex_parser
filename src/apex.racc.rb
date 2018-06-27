@@ -44,7 +44,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                   | field_declaration
                   | comment
 
-  field_declaration : empty_or_modifiers name field_declarators SEMICOLON
+  field_declaration : empty_or_modifiers type field_declarators SEMICOLON
                     {
                       result = AST::FieldDeclarationNode.new(
                         modifiers: val[0],
@@ -75,7 +75,7 @@ constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parame
                             lineno: val[1].lineno
                           )
                         }
-method_declaration : empty_or_modifiers name simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
+method_declaration : empty_or_modifiers type simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE statements RC_BRACE
                    {
                      result = AST::MethodDeclarationNode.new(
                        modifiers: val[0],
@@ -245,7 +245,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   primary_number : INTEGER { result = AST::ApexIntegerNode.new(value: value(val, 0), lineno: get_lineno(val, 0)) }
                  | DOUBLE { result = AST::ApexDoubleNode.new(value: val(val, 0), lineno: get_lineno(val, 0)) }
 
-  variable_declaration : name variable_declarators SEMICOLON
+  variable_declaration : type variable_declarators SEMICOLON
                        {
                          result = AST::OperatorNode.new(
                            type: :declaration,
@@ -294,6 +294,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   arguments : expression { result = [val[0]] }
             | arguments COMMA expression { result = val[0].push(val[2]) }
 
+  type : name
   name : simple_name
        | qualified_name
   simple_name: IDENT { result = AST::NameNode.new(value: [value(val, 0)], lineno: get_lineno(val, 0)) }
@@ -307,7 +308,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                    {
                      result = AST::SoqlNode.new(soql: val[4])
                    }
-  new_expression : NEW name L_BRACE empty_or_arguments R_BRACE
+  new_expression : NEW type L_BRACE empty_or_arguments R_BRACE
                  {
                    result = AST::NewNode.new(apex_class_name: val[1], arguments: val[3])
                  }

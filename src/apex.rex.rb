@@ -65,8 +65,6 @@ rule
       instanceof        { [:INSTANCEOF, [text, lineno]] }
       return             { [:RETURN, [text, lineno]] }
       \d+                { [:INTEGER, [text.to_i, lineno]] }
-      {WORD}\<{WORD}\>   { [:IDENT, [text, lineno]] }
-      {WORD}\[\]         { [:IDENT, [text, lineno]] }
       {WORD}             { [:IDENT, [text, lineno]] }
       \n
       \+\+                 { [:INCR, [text, lineno]] }
