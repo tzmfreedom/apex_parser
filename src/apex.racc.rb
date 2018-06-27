@@ -17,7 +17,6 @@ rule
                   | root_statements class_or_trigger { val[0].push(val[1]) }
   class_or_trigger : class_declaration
                    | trigger_declaration
-                   | comment
   # Class Declaration
 
 class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_implements LC_BRACE class_statements RC_BRACE
@@ -42,7 +41,6 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
   class_statement : method_declaration
                   | constructor_declaration
                   | field_declaration
-                  | comment
 
   field_declaration : empty_or_modifiers type field_declarators SEMICOLON
                     {
@@ -135,7 +133,6 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE before_after_arguments R_BR
             | break_statement
             | continue_statement
             | while_statement
-            | comment
             | try_statement
             | expression_statement
             | dml_statement

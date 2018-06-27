@@ -10,26 +10,27 @@ macro
   DELIM (?=[\(\s])
 rule
       {BLANK}
-      {REMIN}            { @state = :REM; [:REM_IN, [text, lineno]] }
-:REM  {REMOUT}           { @state = nil; [:REM_OUT, [text, lineno]] }
-:REM  ({COMMENT})(?={REMOUT})   { [:COMMENT, [text, lineno]] }
-      \/\/.*\n           { [:COMMENT, [text, lineno]] }
-      \[                 { [:LS_BRACE, [text, lineno]] }
-      \]                 { [:RS_BRACE, [text, lineno]] }
-      \{                 { [:LC_BRACE, [text, lineno]] }
-      \}                 { [:RC_BRACE, [text, lineno]] }
-      \(                 { [:L_BRACE, [text, lineno]] }
-      \)                 { [:R_BRACE, [text, lineno]] }
-      '[^']*'            { [:STRING, [text[1..-2], lineno]] }
-      @\w+               { [:ANNOTATION, [text, lineno]] }
-      select{DELIM_BLANK} { [:SELECT, [text, lineno]] }
-      from{DELIM_BLANK}               { [:FROM, [text, lineno]] }
-      try(?=[\s\{])               { [:TRY, [text, lineno]] }
-      catch(?=[\s\{])               { [:CATCH, [text, lineno]] }
-      null(?=[\s;\(\)])               { [:NULL, [text, lineno]] }
-      true(?=[\s;\(\)])               { [:TRUE, [text, lineno]] }
-      false(?=[\s;\(\)])              { [:FALSE, [text, lineno]] }
-      for{DELIM}        { [:FOR, [text, lineno]] }
+      {REMIN}                   { @state = :REM; nil }
+:REM  {REMOUT}                  { @state = nil; nil }
+:REM  ({COMMENT})(?={REMOUT})
+:REM  ({COMMENT})
+      \/\/.*
+      \[                        { [:LS_BRACE, [text, lineno]] }
+      \]                        { [:RS_BRACE, [text, lineno]] }
+      \{                        { [:LC_BRACE, [text, lineno]] }
+      \}                        { [:RC_BRACE, [text, lineno]] }
+      \(                        { [:L_BRACE, [text, lineno]] }
+      \)                        { [:R_BRACE, [text, lineno]] }
+      '[^']*'                   { [:STRING, [text[1..-2], lineno]] }
+      @\w+                      { [:ANNOTATION, [text, lineno]] }
+      select{DELIM_BLANK}       { [:SELECT, [text, lineno]] }
+      from{DELIM_BLANK}         { [:FROM, [text, lineno]] }
+      try(?=[\s\{])             { [:TRY, [text, lineno]] }
+      catch(?=[\s\{])           { [:CATCH, [text, lineno]] }
+      null(?=[\s;\(\)])         { [:NULL, [text, lineno]] }
+      true(?=[\s;\(\)])         { [:TRUE, [text, lineno]] }
+      false(?=[\s;\(\)])        { [:FALSE, [text, lineno]] }
+      for{DELIM}                { [:FOR, [text, lineno]] }
       while{DELIM}              { [:WHILE, [text, lineno]] }
       if{DELIM}                 { [:IF, [text, lineno]] }
       else{DELIM}               { [:ELSE, [text, lineno]] }
@@ -67,29 +68,29 @@ rule
       \d+                { [:INTEGER, [text.to_i, lineno]] }
       {WORD}             { [:IDENT, [text, lineno]] }
       \n
-      \+\+                 { [:INCR, [text, lineno]] }
-      \-\-                 { [:DECR, [text, lineno]] }
-      \+                 { [:ADD, [text, lineno]] }
-      \-                 { [:SUB, [text, lineno]] }
-      \*                 { [:MUL, [text, lineno]] }
-      \/                 { [:DIV, [text, lineno]] }
-      &&                 { [:CONDITIONAL_AND, [text, lineno]] }
-      \|\|                 { [:CONDITIONAL_OR, [text, lineno]] }
-      &                  { [:AND, [text, lineno]] }
-      \|                  { [:OR, [text, lineno]] }
-      \^                 { [:TILDE, [text, lineno]] }
-      ==                 { [:EQUAL, [text, lineno]] }
-      !=                 { [:NOT_EQUAL, [text, lineno]] }
-      <<                 { [:LEFT_SHIFT, [text, lineno]] }
-      >>                 { [:RIGHT_SHIFT, [text, lineno]] }
-      <=                 { [:LESS_THAN_EQUAL, [text, lineno]] }
-      >=                 { [:GREATER_THAN_EQUAL, [text, lineno]] }
-      <                  { [:LESS_THAN, [text, lineno]] }
-      >                  { [:GREATER_THAN, [text, lineno]] }
-      =                  { [:ASSIGN, [text, lineno]] }
-      \:                 { [:COLON, [text, lineno]]}
-      ;                  { [:SEMICOLON, [text, lineno]]}
-      ,                  { [:COMMA, [text, lineno]] }
-      \.                 { [:DOT, [text, lineno]] }
-      .                  { [text, [text, lineno]] }
+      \+\+                      { [:INCR, [text, lineno]] }
+      \-\-                      { [:DECR, [text, lineno]] }
+      \+                        { [:ADD, [text, lineno]] }
+      \-                        { [:SUB, [text, lineno]] }
+      \*                        { [:MUL, [text, lineno]] }
+      \/                        { [:DIV, [text, lineno]] }
+      &&                        { [:CONDITIONAL_AND, [text, lineno]] }
+      \|\|                      { [:CONDITIONAL_OR, [text, lineno]] }
+      &                         { [:AND, [text, lineno]] }
+      \|                        { [:OR, [text, lineno]] }
+      \^                        { [:TILDE, [text, lineno]] }
+      ==                        { [:EQUAL, [text, lineno]] }
+      !=                        { [:NOT_EQUAL, [text, lineno]] }
+      <<                        { [:LEFT_SHIFT, [text, lineno]] }
+      >>                        { [:RIGHT_SHIFT, [text, lineno]] }
+      <=                        { [:LESS_THAN_EQUAL, [text, lineno]] }
+      >=                        { [:GREATER_THAN_EQUAL, [text, lineno]] }
+      <                         { [:LESS_THAN, [text, lineno]] }
+      >                         { [:GREATER_THAN, [text, lineno]] }
+      =                         { [:ASSIGN, [text, lineno]] }
+      \:                        { [:COLON, [text, lineno]]}
+      ;                         { [:SEMICOLON, [text, lineno]]}
+      ,                         { [:COMMA, [text, lineno]] }
+      \.                        { [:DOT, [text, lineno]] }
+      .                         { [text, [text, lineno]] }
 end

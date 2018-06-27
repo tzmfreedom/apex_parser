@@ -10,8 +10,11 @@ public class Hoge extends HogeSuper {
         System.debug(1000);
         return c;
     }
+    /*
+    123
+     */
 
-    @aaa
+    @aaa // hogehoge
     public static void action() {
         System.debug('*** variable test assign***');
         Integer b = 100;
@@ -27,7 +30,6 @@ public class Hoge extends HogeSuper {
         System.debug(new Hoge());
         System.debug(h.foo(1234));
         System.debug(h.aaa());
-        System.debug(h.bbb());
 
         if (1 == 2) {
             System.debug('hoge');
