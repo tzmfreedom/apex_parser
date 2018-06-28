@@ -16,6 +16,8 @@ module ApexParser
             BooleanNode
           when :String
             ApexStringNode
+          when :Blob
+            Blob
           when :Object
             AnyObject
           else

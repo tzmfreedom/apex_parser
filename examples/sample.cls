@@ -27,7 +27,43 @@ public class Hoge extends HogeSuper {
         h.b = 123;
         System.debug(h.b);
 
-        List<Account> acc = new List<Account>();
+        List<Account> accounts = new List<Account>();
+        accounts.add(new Account());
+        accounts.add(new Account());
+        accounts.add(new Account());
+
+        for (Account acc : accounts) {
+            System.debug(acc);
+        }
+
+        List<List<Account>> accounts = new List<List<Account>>();
+        accounts.add(new List<Account>());
+        accounts.add(new List<Account>());
+        accounts.add(new List<Account>());
+
+        for (List<Account> acc : accounts) {
+            System.debug(acc);
+        }
+
+        List<Map<String, Integer>> ii = new List<Map<String, Integer>>();
+        ii.add(new Map<String, Integer>());
+        ii.add(new Map<String, Integer>());
+        ii.add(new Map<String, Integer>());
+        for (Map<String, Integer> i : ii) {
+            System.debug(i);
+        }
+        Hoge h = new Hoge();
+        System.debug(h);
+        ii[1] = h;
+        for (Map<String, Integer> i : ii) {
+            System.debug(i);
+        }
+
+        System.debug(EncodingUtil.base64Decode('hogehoge'));
+        System.debug(EncodingUtil.base64Encode(Blob.valueOf('hogehoge')));
+        System.debug(Blob.valueOf('hogehoge').size());
+        System.debug(Blob.valueOf('aahogehoge').toString());
+
 /*
         System.debug(new Hoge());
         System.debug(h.foo(1234));

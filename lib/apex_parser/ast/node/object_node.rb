@@ -8,7 +8,7 @@ module ApexParser
       end
 
       def value
-        "#<#{apex_class_node.name}#{generics_node ? "<#{generics_node.name}>" : nil}:#{object_id}>"
+        "#<#{apex_class_node.name}#{generics_arguments ? "<#{generics_arguments.map(&:name).join(', ')}>" : nil}:#{object_id}>"
       end
     end
   end

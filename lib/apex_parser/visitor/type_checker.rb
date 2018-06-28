@@ -231,7 +231,7 @@ module ApexParser
       def visit_method_invocation(node)
         receiver_node, method_node = receiver_from_name(node)
         unless receiver_node && method_node
-          puts "No Method Error!!"
+          STDERR.puts "No Method Error!!"
           return nil
         end
         env = check_argument(method_node, node.arguments)

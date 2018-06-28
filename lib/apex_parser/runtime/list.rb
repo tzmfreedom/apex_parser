@@ -26,6 +26,28 @@ module ApexParser
       this.instance_fields[:records].push(local_scope[:object])
     end
 
+    c.add_instance_method(:addAll, %i[public], :void, [[:List, :object]]) do |local_scope|
+      this = local_scope[:this]
+      this.instance_fields[:records].concat(local_scope[:object])
+    end
+
+    c.add_instance_method(:clear, %i[public], :void, []) do |local_scope|
+      this = local_scope[:this]
+      this.instance_fields[:records] = []
+    end
+
+    c.add_instance_method(:clone, %i[public], :void, []) do |local_scope|
+      self.clone
+    end
+
+    c.add_instance_method(:contains, %i[public], :Object, [[:Object, :object]]) do |local_scope|
+      this = local_scope[:this]
+      object = local_scope[:object]
+      this.instance_fields[:records].each do |record|
+        record.value == object.value
+      end
+    end
+
     c.add_instance_method(:get, %i[public], :Object, [[:Integer, :idx]]) do |local_scope|
       this = local_scope[:this]
       idx = local_scope[:idx].value

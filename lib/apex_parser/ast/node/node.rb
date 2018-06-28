@@ -15,6 +15,10 @@ module ApexParser
         public_send("#{key}=", value)
       end
     end
+
+    def to_s
+      respond_to?(:value) ? value : super
+    end
   end
 
   class AnyObject; end

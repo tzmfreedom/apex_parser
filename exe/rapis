@@ -25,14 +25,15 @@ file = File.expand_path(args[0])
 
 raise "#{file} not exist" unless File.exists?(file)
 
+begin
 if File.directory?(file)
   Dir["#{file}/**/*.cls"].each do |filepath|
-    root_stmts = parser.scan_str(File.read(filepath))
+    root_stmts = parser.scan_file(filepath)
     root_stmts.each { |stmt| stmt.accept(interpreter) }
     pp root_stmts if show_ast
   end
 else
-  root_stmts = parser.scan_str(File.read(file))
+  root_stmts = parser.scan_file(file)
   root_stmts.each { |stmt| stmt.accept(interpreter) }
   pp root_stmts if show_ast
 end
@@ -45,3 +46,9 @@ call_method_node = ApexParser::AST::MethodInvocationNode.new(
   apex_method_name: :action
 )
 call_method_node.accept(interpreter)
+rescue => e
+  puts parser.filename
+  puts e.message
+  puts e.backtrace
+end
+

@@ -2,7 +2,7 @@ module ApexParser
   ApexClassCreator.new do |c|
     c.add_class(:System, %i[public])
     c.add_static_method(:debug, [:public], :String, [[:Object, :object]]) do |local_scope|
-      puts local_scope[:object].value
+      puts local_scope[:object].to_s
     end
 
     c.add_static_method(:assert, [:public], :void, [[:Boolean, :condition], [:String, :msg]]) do |local_scope|

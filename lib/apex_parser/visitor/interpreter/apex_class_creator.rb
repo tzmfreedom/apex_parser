@@ -59,7 +59,7 @@ module ApexParser
         implements: nil,
         lineno: nil
       )
-      Visitor::Interpreter::ApexClassTable.register(@apex_class.name, @apex_class)
+      ApexClassTable.register(@apex_class.name, @apex_class)
     end
   end
 end

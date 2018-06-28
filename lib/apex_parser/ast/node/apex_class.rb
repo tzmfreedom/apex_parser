@@ -8,7 +8,7 @@ module ApexParser
 
       def super_class
         @super_class ||= begin
-          super_class_hash = Visitor::Interpreter::ApexClassTable[apex_super_class.to_s]
+          super_class_hash = ApexClassTable[apex_super_class.to_s]
           if super_class_hash
             super_class_hash[:_top]
           end

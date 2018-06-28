@@ -51,7 +51,7 @@ module ApexParser
           elsif node.left.is_a?(AST::ArrayAccess)
             receiver_node = node.left.receiver.accept(self)
             key = node.left.key.accept(self)
-            receiver_node.instance_fields[:_records][key.value] = node.right.accept(self)
+            receiver_node.instance_fields[:records][key.value] = node.right.accept(self)
           else
             STDERR.puts 'Assign Error'
           end
@@ -181,6 +181,8 @@ module ApexParser
           when AST::ContinueNode
           end
         end
+
+        list_node.instance_fields[:_idx] = 0
 
         pop_scope
       end
@@ -351,6 +353,10 @@ module ApexParser
         env
       end
 
+      def visit_blob(node)
+        node
+      end
+
       def visit_null(node)
         node
       end
@@ -374,7 +380,7 @@ module ApexParser
       def visit_access(node)
         receiver_node = node.receiver.accept(self)
         key = node.key.accept(self)
-        receiver_node.instance_fields[:_records][key.value]
+        receiver_node.instance_fields[:records][key.value]
       end
 
       def visit_name(node)
@@ -450,7 +456,12 @@ module ApexParser
       end
 
       def receiver_from_name(node)
-        return node.receiver.accept(self) unless node.receiver.is_a?(AST::NameNode)
+        unless node.receiver.is_a?(AST::NameNode)
+          receiver_node = node.receiver.accept(self)
+          class_node = receiver_node.apex_class_node
+          method_node = class_node.search_instance_method(node.apex_method_name)
+          return [receiver_node, method_node]
+        end
 
         names = node.receiver.value
         name = names.first

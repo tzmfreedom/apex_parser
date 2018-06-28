@@ -2,7 +2,7 @@ class ApexParser::ApexCompiler
 macro
   WORD [a-zA-Z][a-zA-Z0-9\_]*
   BLANK  [\ \t]+
-  COMMENT [\s\S\t]+?
+  COMMENT [^\n]+?
   REMIN \/\*
   REMOUT \*\/
   DELIM_BLANK (?=\s)
@@ -13,7 +13,11 @@ rule
       {REMIN}                   { @state = :REM; nil }
 :REM  {REMOUT}                  { @state = nil; nil }
 :REM  ({COMMENT})(?={REMOUT})
+:REM  \n
 :REM  ({COMMENT})
+      select{DELIM_BLANK}       { @state = :SOQL; nil }
+:SOQL [^\]]*(?=\])              { @state = nil; [:SOQL_TERM, [text, lineno]] }
+:SOQL [^\]]*                    { [:SOQL_TERM, [text, lineno]] }
       \/\/.*
       \[                        { [:LS_BRACE, [text, lineno]] }
       \]                        { [:RS_BRACE, [text, lineno]] }
@@ -24,7 +28,6 @@ rule
       '[^']*'                   { [:STRING, [text[1..-2], lineno]] }
       @\w+                      { [:ANNOTATION, [text, lineno]] }
       testMethod{DELIM_BLANK}   { [:TEST_METHOD, [text, lineno]] }
-      select{DELIM_BLANK}       { [:SELECT, [text, lineno]] }
       from{DELIM_BLANK}         { [:FROM, [text, lineno]] }
       try(?=[\s\{])             { [:TRY, [text, lineno]] }
       catch(?=[\s\{])           { [:CATCH, [text, lineno]] }
@@ -33,6 +36,8 @@ rule
       false(?=[\s;\(\)])        { [:FALSE, [text, lineno]] }
       for{DELIM}                { [:FOR, [text, lineno]] }
       while{DELIM}              { [:WHILE, [text, lineno]] }
+      continue(?=[\s;])         { [:CONTINUE, [text, lineno]] }
+      break(?=[\s;])            { [:BREAK, [text, lineno]] }
       if{DELIM}                 { [:IF, [text, lineno]] }
       else{DELIM}               { [:ELSE, [text, lineno]] }
       switch{DELIM}                 { [:SWITCH, [text, lineno]] }
@@ -65,10 +70,15 @@ rule
       abstract           { [:ABSTRACT, [text, lineno]] }
       virtual            { [:VIRTUAL, [text, lineno]] }
       instanceof        { [:INSTANCEOF, [text, lineno]] }
-      return             { [:RETURN, [text, lineno]] }
+      return(?=[;\s])   { [:RETURN, [text, lineno]] }
       \d+                { [:INTEGER, [text.to_i, lineno]] }
       {WORD}             { [:IDENT, [text, lineno]] }
       \n
+      =>                      { [:ARROW, [text, lineno]] }
+      \+=                      { [:ADD_ASSIGN, [text, lineno]] }
+      \-=                      { [:SUB_ASSIGN, [text, lineno]] }
+      \*=                      { [:MUL_ASSIGN, [text, lineno]] }
+      \/=                      { [:DIV_ASSIGN, [text, lineno]] }
       \+\+                      { [:INCR, [text, lineno]] }
       \-\-                      { [:DECR, [text, lineno]] }
       \+                        { [:ADD, [text, lineno]] }

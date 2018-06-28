@@ -11,7 +11,8 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV MOD ADD SUB DOUBLE
   LS_BRACE RS_BRACE TRY CATCH INCR DECR
   # LEFT_SHIFT RIGHT_SHIFT
   AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION SWITCH WHEN TEST_METHOD
-  EXCLAMATION
+  EXCLAMATION ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN
+  SOQL_TERM ARROW
 
 rule
   root_statements : class_or_trigger { result = [val[0]] }
@@ -154,7 +155,7 @@ empty_or_statements :
   try_statement : TRY statements CATCH L_BRACE R_BRACE LC_BRACE statements RC_BRACE
 
   array_access : name LS_BRACE expression RS_BRACE
-               { result = AST::ArrayAccess.new(receiver: value(val, 0), key: val[2]) }
+               { result = AST::ArrayAccess.new(receiver: val[0], key: val[2]) }
                | primary_expression LS_BRACE expression RS_BRACE
                { result = AST::ArrayAccess.new(receiver: val[0], key: val[2]) }
   field_access : primary_expression DOT simple_name { result = val }
@@ -166,7 +167,7 @@ empty_or_expression :
 assignment_expression  : conditional_expression
                        | assignment
                        | soql_expression
-assignment : left_hand_side ASSIGN assignment_expression
+assignment : left_hand_side assignment_operator assignment_expression
            {
              result = AST::OperatorNode.new(
                type: :assign,
@@ -174,7 +175,11 @@ assignment : left_hand_side ASSIGN assignment_expression
                right: val[2]
              )
            }
-
+  assignment_operator : ASSIGN
+                      | ADD_ASSIGN
+                      | SUB_ASSIGN
+                      | MUL_ASSIGN
+                      | DIV_ASSIGN
 
   conditional_expression : conditional_or_expression
                          | conditional_or_expression QUESTION expression COLON conditional_expression { result = AST::OperatorNode.new(type: :'?', left: val[0], right: val[2]) }
@@ -218,6 +223,8 @@ multiplicative_expression : unary_expression
   unary_expression : pre_increment_expression
                    | pre_decrement_expression
                    | postfix_expression
+                   | ADD unary_expression
+                   | SUB unary_expression
                    | EXCLAMATION unary_expression
                    | TILDE unary_expression
 
@@ -289,7 +296,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                     {
                       result = AST::MethodInvocationNode.new(
                         receiver: val[0],
-                        apex_method_name: val[2],
+                        apex_method_name: value(val, 2),
                         arguments: val[4],
                         lineno: get_lineno(val, 1)
                       )
@@ -300,7 +307,6 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
             | arguments COMMA expression { result = val[0].push(val[2]) }
 
   type : name { result = AST::Type.new(name: val[0].to_s) }
-       | name LS_BRACE RS_BRACE { result = val[0].value.push('[]') }
        | type generics { result = AST::Type.new(name: val[0].name, generics_arguments: val[1]) }
   types : type { result = [val[0]] }
         | types COMMA type { result = val[0].push(val[2]) }
@@ -314,14 +320,24 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   boolean : TRUE { result = AST::BooleanNode.new(true) }
           | FALSE { result = AST::BooleanNode.new(false) }
 
-  soql_expression : LS_BRACE SELECT soql_terms FROM soql_terms RS_BRACE
+  soql_expression : LS_BRACE soql_terms RS_BRACE
                    {
-                     result = AST::SoqlNode.new(soql: val[4])
+                     result = AST::SoqlNode.new(soql: val[0])
                    }
-  new_expression : NEW type L_BRACE empty_or_arguments R_BRACE
+  new_expression : NEW type empty_or_type_array initializer_statemenet
                  {
                    result = AST::NewNode.new(type: val[1], arguments: val[3])
                  }
+  initializer_statemenet : L_BRACE empty_or_arguments R_BRACE { result = val[1] }
+                         | LC_BRACE initializers RC_BRACE { result = val[1] }
+  empty_or_type_array :
+                      | LS_BRACE RS_BRACE
+                      | LS_BRACE INTEGER RS_BRACE
+
+  initializers : initializer { result = [val[0]] }
+               | initializers COMMA initializer { result = val[0].push(val[2]) }
+  initializer : assignment
+              | STRING ARROW expression
   if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
                {
                  result = AST::IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
@@ -343,10 +359,10 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                 | when_literals COMMA literal { result = val[0].push(val[2]) }
   for_statement : FOR L_BRACE empty_or_variable_declaration SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
-                  | FOR L_BRACE name simple_name COLON expression R_BRACE LC_BRACE statements RC_BRACE
+                  | FOR L_BRACE type simple_name COLON expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::ForEnumNode.new(type: val[2], ident: val[3], expression: val[5], statements: val[8]) }
   empty_or_variable_declaration :
-                                | name variable_declarators
+                                | type variable_declarators
                                  {
                                    result = AST::OperatorNode.new(
                                      type: :declaration,
@@ -357,22 +373,14 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   while_statement : WHILE L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::WhileNode.new(condition_statement: val[2], statements: val[5]) }
 
-  soql_term : name
-            | INTEGER
-            | STRING
-            | ASSIGN
-            | LESS_THAN
-            | LESS_THAN_EQUAL
-            | GREATER_THAN
-            | GREATER_THAN_EQUAL
-  soql_terms : soql_term
-             | soql_terms soql_term
+  soql_terms : SOQL_TERM
+             | soql_terms SOQL_TERM
 
   break_statement : BREAK SEMICOLON { result = AST::BreakNode.new }
   continue_statement : CONTINUE SEMICOLON { result = AST::ContinueNode.new }
   return_statement : RETURN SEMICOLON { result = AST::ReturnNode.new(expression: AST::NullNode.new) }
                    | RETURN expression SEMICOLON { result = AST::ReturnNode.new(expression: val[1]) }
-  dml_statement : dml name SEMICOLON { result = AST::DML.new(dml: value(val, 0), object: val[1]) }
+  dml_statement : dml expression SEMICOLON { result = AST::DML.new(dml: value(val, 0), object: val[1]) }
 end
 
 ---- header
