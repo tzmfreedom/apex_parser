@@ -11,6 +11,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV MOD ADD SUB DOUBLE
   LS_BRACE RS_BRACE TRY CATCH INCR DECR
   LEFT_SHIFT RIGHT_SHIFT
   AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION SWITCH WHEN TEST_METHOD
+  EXCLAMATION
 
 rule
   root_statements : class_or_trigger { result = [val[0]] }
@@ -41,6 +42,7 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
   class_statement : method_declaration
                   | constructor_declaration
                   | field_declaration
+                  | class_declaration
 
   field_declaration : empty_or_modifiers type field_declarators SEMICOLON
                     {
@@ -60,8 +62,8 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                    { result = AST::FieldDeclarator.new(name: val[0].to_s, expression: val[2]) }
   getter_setter : getter setter
                 | setter getter
-  getter : GET SEMICOLON
-  setter : SET SEMICOLON
+  getter : empty_or_modifiers GET SEMICOLON
+  setter : empty_or_modifiers SET SEMICOLON
 
 constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parameters R_BRACE LC_BRACE empty_or_statements RC_BRACE
                         {
@@ -89,7 +91,7 @@ empty_or_parameters :
                      | parameters
   parameters: parameter { result = [val[0]] }
             | parameters COMMA parameter { result = val[0].push(val[2]) }
-parameter : name simple_name { result = AST::ArgumentNode.new(type: val[0], name: val[1].to_s) }
+parameter : type simple_name { result = AST::ArgumentNode.new(type: val[0], name: val[1].to_s) }
 
 empty_or_modifiers :
                    | modifiers
@@ -216,6 +218,8 @@ multiplicative_expression : unary_expression
   unary_expression : pre_increment_expression
                    | pre_decrement_expression
                    | postfix_expression
+                   | EXCLAMATION unary_expression
+                   | TILDE unary_expression
 
   postfix_expression : post_increment_expression
                      | post_decrement_expression

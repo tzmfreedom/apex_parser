@@ -88,6 +88,7 @@ rule
       >=                        { [:GREATER_THAN_EQUAL, [text, lineno]] }
       <                         { [:LESS_THAN, [text, lineno]] }
       >                         { [:GREATER_THAN, [text, lineno]] }
+      \!                         { [:EXCLAMATION, [text, lineno]] }
       =                         { [:ASSIGN, [text, lineno]] }
       \:                        { [:COLON, [text, lineno]]}
       ;                         { [:SEMICOLON, [text, lineno]]}
