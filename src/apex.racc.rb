@@ -9,7 +9,7 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV MOD ADD SUB DOUBLE
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
   NULL CONTINUE BREAK SELECT FROM
   LS_BRACE RS_BRACE TRY CATCH INCR DECR
-  LEFT_SHIFT RIGHT_SHIFT
+  # LEFT_SHIFT RIGHT_SHIFT
   AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION SWITCH WHEN TEST_METHOD
   EXCLAMATION
 
@@ -69,7 +69,7 @@ constructor_declaration : empty_or_modifiers simple_name L_BRACE empty_or_parame
                         {
                           result = AST::ConstructorDeclarationNode.new(
                             modifiers: val[0],
-                            return_type: :void,
+                            return_type: AST::Type.new(name: :void),
                             name: val[1].to_s,
                             arguments: val[3],
                             statements: val[6],
@@ -205,8 +205,8 @@ relational_expression : shift_expression
                       | relational_expression GREATER_THAN_EQUAL shift_expression { result = AST::OperatorNode.new(type: :>=, left: val[0], right: val[2]) }
 
 shift_expression : additive_expression
-                 | shift_expression LEFT_SHIFT additive_expression { result = AST::OperatorNode.new(type: :<<, left: val[0], right: val[2]) }
-                 | shift_expression RIGHT_SHIFT additive_expression { result = AST::OperatorNode.new(type: :>>, left: val[0], right: val[2]) }
+#                 | shift_expression LEFT_SHIFT additive_expression { result = AST::OperatorNode.new(type: :<<, left: val[0], right: val[2]) }
+#                 | shift_expression RIGHT_SHIFT additive_expression { result = AST::OperatorNode.new(type: :>>, left: val[0], right: val[2]) }
 additive_expression : multiplicative_expression
                     | additive_expression ADD multiplicative_expression { result = AST::OperatorNode.new(type: :+, left: val[0], right: val[2]) }
                     | additive_expression SUB multiplicative_expression { result = AST::OperatorNode.new(type: :-, left: val[0], right: val[2]) }
@@ -299,12 +299,12 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   arguments : expression { result = [val[0]] }
             | arguments COMMA expression { result = val[0].push(val[2]) }
 
-  type : name
+  type : name { result = AST::Type.new(name: val[0].to_s) }
        | name LS_BRACE RS_BRACE { result = val[0].value.push('[]') }
-       | type generics
-  types : type
-        | types COMMA type
-  generics : LESS_THAN types GREATER_THAN
+       | type generics { result = AST::Type.new(name: val[0].name, generics_arguments: val[1]) }
+  types : type { result = [val[0]] }
+        | types COMMA type { result = val[0].push(val[2]) }
+  generics : LESS_THAN types GREATER_THAN { result = val[1] }
   name : simple_name
        | qualified_name
   simple_name: IDENT { result = AST::NameNode.new(value: [value(val, 0)], lineno: get_lineno(val, 0)) }
@@ -318,12 +318,10 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                    {
                      result = AST::SoqlNode.new(soql: val[4])
                    }
-  new_expression : NEW type L_BRACE empty_or_arguments R_BRACE empty_or_initialize_parameter
+  new_expression : NEW type L_BRACE empty_or_arguments R_BRACE
                  {
-                   result = AST::NewNode.new(apex_class_name: val[1], arguments: val[3])
+                   result = AST::NewNode.new(type: val[1], arguments: val[3])
                  }
-  empty_or_initialize_parameter :
-                                | LC_BRACE empty_or_arguments RC_BRACE
   if_statement : IF L_BRACE expression R_BRACE LC_BRACE statements RC_BRACE else_statement_or_empty
                {
                  result = AST::IfNode.new(condition: val[2], if_stmt: val[5], else_stmt: val[7])
@@ -375,8 +373,6 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   return_statement : RETURN SEMICOLON { result = AST::ReturnNode.new(expression: AST::NullNode.new) }
                    | RETURN expression SEMICOLON { result = AST::ReturnNode.new(expression: val[1]) }
   dml_statement : dml name SEMICOLON { result = AST::DML.new(dml: value(val, 0), object: val[1]) }
-  comment : COMMENT { result = AST::CommentNode.new(val[0]) }
-          | REM_IN COMMENT REM_OUT { result = AST::CommentNode.new(val[1]) }
 end
 
 ---- header

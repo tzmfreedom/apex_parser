@@ -219,9 +219,12 @@ module ApexParser
       end
 
       def visit_new(node)
-        apex_class_node, generics_node = parse_type(node.apex_class_name.to_s)
-        object_node = AST::ObjectNode.new(apex_class_node: apex_class_node, arguments: node.arguments)
-        object_node.generics_node = generics_node
+        apex_class_node = parse_type(node.type.name)
+        object_node = AST::ObjectNode.new(
+          apex_class_node: apex_class_node,
+          arguments: node.arguments,
+          generics_arguments: node.type.generics_arguments
+        )
         # assign instance variables
         object_node.instance_fields = HashWithUpperCasedSymbolicKey.new(apex_class_node.instance_fields.map do |variable_name, variable_node|
           [variable_name, variable_node.accept(self)]
@@ -243,8 +246,8 @@ module ApexParser
         object_node
       end
 
-      def parse_type(apex_class_name)
-        [ApexClassTable[apex_class_name][:_top]]
+      def parse_type(class_name)
+        ApexClassTable[class_name][:_top]
       end
 
       def visit_def_instance_method(node)
@@ -303,7 +306,7 @@ module ApexParser
             end
           end
 
-          if method_node.return_type.to_s != 'void' && must_return
+          if method_node.return_type.name != 'void' && must_return
             # TODO: no return error
             STDERR.puts 'NO RETURN ERROR'
           end

@@ -18,7 +18,7 @@ module ApexParser
       method = ::ApexParser::AST::ConstructorDeclarationNode.new(
         name: name,
         modifiers: modifiers,
-        return_type: :void,
+        return_type: AST::Type.new(name: :void),
         arguments: arguments.map { |argument| ::ApexParser::AST::ArgumentNode.new(type: argument[0], name: argument[1]) },
         native: true,
         call_proc: call_proc
@@ -30,7 +30,7 @@ module ApexParser
       method = ::ApexParser::AST::MethodDeclarationNode.new(
         name: name,
         modifiers: modifiers,
-        return_type: return_type,
+        return_type: AST::Type.new(name: return_type),
         arguments: arguments.map { |argument| ::ApexParser::AST::ArgumentNode.new(type: argument[0], name: argument[1]) },
         native: true,
         call_proc: call_proc
@@ -42,7 +42,7 @@ module ApexParser
       method = ::ApexParser::AST::MethodDeclarationNode.new(
         name: name,
         modifiers: modifiers + ['static'],
-        return_type: return_type,
+        return_type: AST::Type.new(name: return_type),
         arguments: arguments.map { |argument| ::ApexParser::AST::ArgumentNode.new(type: argument[0], name: argument[1]) },
         native: true,
         call_proc: call_proc

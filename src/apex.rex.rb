@@ -82,8 +82,6 @@ rule
       \^                        { [:TILDE, [text, lineno]] }
       ==                        { [:EQUAL, [text, lineno]] }
       !=                        { [:NOT_EQUAL, [text, lineno]] }
-      <<                        { [:LEFT_SHIFT, [text, lineno]] }
-      >>                        { [:RIGHT_SHIFT, [text, lineno]] }
       <=                        { [:LESS_THAN_EQUAL, [text, lineno]] }
       >=                        { [:GREATER_THAN_EQUAL, [text, lineno]] }
       <                         { [:LESS_THAN, [text, lineno]] }

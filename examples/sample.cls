@@ -26,6 +26,8 @@ public class Hoge extends HogeSuper {
         System.debug(h.b);
         h.b = 123;
         System.debug(h.b);
+
+        List<Account> acc = new List<Account>();
 /*
         System.debug(new Hoge());
         System.debug(h.foo(1234));

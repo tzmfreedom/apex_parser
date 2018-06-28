@@ -1,7 +1,7 @@
 module ApexParser
   module AST
     class NewNode < Base
-      attr_accessor :apex_class_name, :arguments
+      attr_accessor :type, :arguments
 
       def initialize(*args)
         super
