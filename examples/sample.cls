@@ -19,9 +19,12 @@ public class Hoge extends HogeSuper{
         Integer a = b = 20;
         System.debug(a);
         System.debug(b);
-
-        System.debug(new Hoge());
         Hoge h = new Hoge();
+        System.debug(h.b);
+        h.b = 123;
+        System.debug(h.b);
+/*
+        System.debug(new Hoge());
         System.debug(h.foo(1234));
 
         if (1 == 2) {
@@ -41,5 +44,6 @@ public class Hoge extends HogeSuper{
             System.debug(i+5);
             i++;
         }
+*/
     }
 }

@@ -36,7 +36,8 @@ module ApexParser
       else
         unless @parent
           # TODO: handling
-          puts 'Undefined Variable'
+          STDERR.puts 'Undefined Variable'
+          return nil
         end
         @parent[key]
       end

@@ -6,6 +6,7 @@ macro
   REMIN \/\*
   REMOUT \*\/
   DELIM_BLANK (?=\s)
+  DELIM_BLANK_OR_COMMA (?=[,\s)])
   DELIM (?=[\(\s])
 rule
       {BLANK}
@@ -32,11 +33,13 @@ rule
       while{DELIM}              { [:WHILE, [text, lineno]] }
       if{DELIM}                 { [:IF, [text, lineno]] }
       else{DELIM}               { [:ELSE, [text, lineno]] }
-      insert{DELIM_BLANK}             { [:INSERT, [text, lineno]] }
-      delete{DELIM_BLANK}             { [:DELETE, [text, lineno]] }
-      undelete{DELIM_BLANK}           { [:UNDELETE, [text, lineno]] }
-      update{DELIM_BLANK}             { [:UPDATE, [text, lineno]] }
-      upsert{DELIM_BLANK}             { [:UPSERT, [text, lineno]] }
+      switch{DELIM}                 { [:SWITCH, [text, lineno]] }
+      when{DELIM}                 { [:WHEN, [text, lineno]] }
+      insert{DELIM_BLANK_OR_COMMA}             { [:INSERT, [text, lineno]] }
+      delete{DELIM_BLANK_OR_COMMA}             { [:DELETE, [text, lineno]] }
+      undelete{DELIM_BLANK_OR_COMMA}           { [:UNDELETE, [text, lineno]] }
+      update{DELIM_BLANK_OR_COMMA}             { [:UPDATE, [text, lineno]] }
+      upsert{DELIM_BLANK_OR_COMMA}             { [:UPSERT, [text, lineno]] }
       before{DELIM_BLANK}             { [:BEFORE, [text, lineno]] }
       after{DELIM_BLANK}              { [:AFTER, [text, lineno]] }
       trigger{DELIM_BLANK}            { [:TRIGGER, [text, lineno]] }
@@ -59,7 +62,7 @@ rule
       implements         { [:IMPLEMENTS, [text, lineno]] }
       abstract           { [:ABSTRACT, [text, lineno]] }
       virtual            { [:VIRTUAL, [text, lineno]] }
-      instance_of        { [:INSTANCE_OF, [text, lineno]] }
+      instanceof        { [:INSTANCEOF, [text, lineno]] }
       return             { [:RETURN, [text, lineno]] }
       \d+                { [:INTEGER, [text.to_i, lineno]] }
       {WORD}\<{WORD}\>   { [:IDENT, [text, lineno]] }

@@ -2,7 +2,6 @@ require 'apex_parser/visitor/interpreter/local_environment'
 require 'apex_parser/visitor/interpreter/data_loader'
 
 require 'apex_parser/visitor/interpreter/apex_class_table'
-require 'apex_parser/visitor/interpreter/trigger_table'
 require 'apex_parser/visitor/interpreter/apex_class_creator'
 Dir[File.expand_path('./runtime/**/*.rb', __dir__)].each do |f|
   require f
@@ -10,9 +9,7 @@ end
 
 module ApexParser
   module Visitor
-    class Interpreter
-      NULL = Object.new
-
+    class TypeChecker
       def initialize
         push_scope({})
       end
@@ -24,16 +21,18 @@ module ApexParser
       end
 
       def visit_if(node)
-        condition_node = node.condition.accept(self)
-        if condition_node.value == true
-          node.if_stmt.each do |statement|
-            statement.accept(self)
-          end
-        else
-          return unless node.else_stmt
-          node.else_stmt.each do |statement|
-            statement.accept(self)
-          end
+        node.condition.accept(self)
+
+        unless node.condition.is_a?(AST::BooleanNode)
+          STDERR.puts "line #{node.lineno}: condition statement should be boolean expression"
+        end
+
+        node.if_stmt.each do |statement|
+          statement.accept(self)
+        end
+
+        node.else_stmt.each do |statement|
+          statement.accept(self)
         end
       end
 
@@ -41,86 +40,67 @@ module ApexParser
         case node.type.to_sym
         when :assign
           if node.left.is_a?(AST::NameNode)
-            receiver_or_name, field_name = field_from_name(node.left)
-            if field_name
-              receiver_or_name.instance_fields[field_name] = node.right.accept(self)
-            else
-              current_scope[receiver_or_name] = node.right.accept(self)
+            type = current_scope[node.left.to_s]
+            if type != node.right.accept(self).type
+              STDERR.puts "line #{node.lineno}: expression must be #{type}"
             end
-          elsif node.left.is_a?(AST::ArrayAccess)
-            receiver_node = node.left.receiver.accept(self)
-            key = node.left.key.accept(self)
-            receiver_node.instance_fields[:_records][key.value] = node.right.accept(self)
           else
-            STDERR.puts 'Assign Error'
+            STDERR.puts 'node must be AST::NameNode'
           end
         when :declaration
           variable_type = node.left.to_s
           node.right.each do |statement|
-            current_scope[statement.left.to_s] = statement.right.accept(self)
+            current_scope[statement.left.to_s] = variable_type
           end
         when :+
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value + node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :-
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value - node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :/
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value / node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :*
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value * node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :%
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value % node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :<<
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value << node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :'<<<'
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value << node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :>>
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value >> node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :'>>>'
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value >> node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :&
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value && node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :|
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value | node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :^
-          AST::ApexIntegerNode.new(value: node.left.accept(self).value ^ node.right.accept(self).value)
+          AST::ApexIntegerNode
         when :'&&'
-          AST::BooleanNode.new(node.left.accept(self).value && node.right.accept(self).value)
+          AST::BooleanNode
         when :'||'
-          AST::BooleanNode.new(node.left.accept(self).value || node.right.accept(self).value)[]
+          AST::BooleanNode
         when :!=
-          AST::BooleanNode.new(node.left.accept(self).value != node.right.accept(self).value)
+          AST::BooleanNode
         when :'!=='
-          AST::BooleanNode.new(node.left.accept(self).value != node.right.accept(self).value)
+          AST::BooleanNode
         when :==
-          AST::BooleanNode.new(node.left.accept(self).value == node.right.accept(self).value)
+          AST::BooleanNode
         when :===
-          AST::BooleanNode.new(node.left.accept(self).value == node.right.accept(self).value)
+          AST::BooleanNode
         when :<=
-          AST::BooleanNode.new(node.left.accept(self).value <= node.right.accept(self).value)
+          AST::BooleanNode
         when :>=
-          AST::BooleanNode.new(node.left.accept(self).value >= node.right.accept(self).value)
+          AST::BooleanNode
         when :<
-          AST::BooleanNode.new(node.left.accept(self).value < node.right.accept(self).value)
+          AST::BooleanNode
         when :>
-          AST::BooleanNode.new(node.left.accept(self).value > node.right.accept(self).value)
+          AST::BooleanNode
         when :pre_increment
-          name = node.left.to_s
-          value = current_scope[name].value
-          current_scope[name] = AST::ApexIntegerNode.new(value: value + 1)
         when :pre_decrement
-          name = node.left.to_s
-          value = current_scope[name].value
-          current_scope[name] = AST::ApexIntegerNode.new(value: value - 1)
         when :post_increment
-          name = node.left.to_s
-          value = current_scope[name].value
-          current_scope[name] = AST::ApexIntegerNode.new(value: value + 1)
-          value
         when :post_decrement
-          name = node.left.to_s
-          value = current_scope[name].value
-          current_scope[name] = AST::ApexIntegerNode.new(value: value - 1)
-          value
+          AST::ApexIntegerNode
         else
           STDERR.puts 'No Operation Error'
         end
@@ -129,24 +109,16 @@ module ApexParser
       def visit_for(node)
         push_scope({})
         node.init_statement.accept(self)
-
-        loop do
-          break if node.exit_condition.accept(self).value == false
-          return_value = execute_statements(node.statements)
-          return return_value if return_value
-          node.increment_statement.accept(self)
-        end
+        node.exit_condition.accept(self)
+        node.increment_statement.accept(self)
+        execute_statements(node.statements)
         pop_scope
       end
 
       def visit_while(node)
         push_scope({})
-
-        loop do
-          break if node.condition_statement.accept(self).value == false
-          return_value = execute_statements(node.statements)
-          return return_value if return_value
-        end
+        node.condition_statement.accept(self)
+        execute_statements(node.statements)
         pop_scope
       end
 
@@ -156,29 +128,17 @@ module ApexParser
         next_method = search_instance_method(list_node.apex_class_node, :next)
         has_next_method= search_instance_method(list_node.apex_class_node, :has_next)
 
-        loop do
-          env = HashWithUpperCasedSymbolicKey.new({ this: list_node })
-          push_scope(env, nil)
-          has_next_return_node = execute_statement(has_next_method)
-          pop_scope
+        env = HashWithUpperCasedSymbolicKey.new({ this: list_node })
+        push_scope(env, nil)
+        execute_statement(has_next_method)
+        pop_scope
 
-          break if has_next_return_node.value == false
-
-          env = HashWithUpperCasedSymbolicKey.new({ this: list_node })
-          push_scope(env, nil)
-          next_return_value = execute_statement(next_method)
-          current_scope[node.ident.name] = next_return_value
-          return_value = execute_statement(node, false)
-          pop_scope
-
-          case return_value
-          when AST::ReturnNode
-            return return_value
-          when AST::BreakNode
-            return
-          when AST::ContinueNode
-          end
-        end
+        env = HashWithUpperCasedSymbolicKey.new({ this: list_node })
+        push_scope(env, nil)
+        next_return_value = execute_statement(next_method)
+        current_scope[node.ident.name] = next_return_value
+        execute_statement(node, false)
+        pop_scope
 
         pop_scope
       end
@@ -193,7 +153,7 @@ module ApexParser
         end
 
         # TODO: Error Handling
-        STDERR.puts 'ERROR : NO METHOD ERROR'
+        puts 'ERROR : NO METHOD ERROR'
         nil
       end
 
@@ -208,7 +168,7 @@ module ApexParser
         end
 
         # TODO: Error Handling
-        STDERR.puts 'ERROR : NO METHOD ERROR'
+        puts 'ERROR : NO METHOD ERROR'
         nil
       end
 
@@ -242,7 +202,15 @@ module ApexParser
       end
 
       def parse_type(apex_class_name)
-        [ApexClassTable[apex_class_name][:_top]]
+        class_name, generics_type =
+          if m = /([a-zA-Z0-9]+)\<([a-zA-Z0-9]+)\>/.match(apex_class_name)
+            [m[1], m[2]]
+          elsif m = /([a-zA-Z0-9]+)\[\]/.match(apex_class_name)
+            [:Array, m[1]]
+          else
+            [apex_class_name, nil]
+          end
+        [ApexClassTable[class_name][:_top], generics_type ? ApexClassTable[generics_type][:_top] : nil]
       end
 
       def visit_def_instance_method(node)
@@ -263,7 +231,7 @@ module ApexParser
       def visit_method_invocation(node)
         receiver_node, method_node = receiver_from_name(node)
         unless receiver_node && method_node
-          STDERR.puts "No Method Error!!"
+          puts "No Method Error!!"
           return nil
         end
         env = check_argument(method_node, node.arguments)
@@ -303,7 +271,7 @@ module ApexParser
 
           if method_node.return_type.to_s != 'void' && must_return
             # TODO: no return error
-            STDERR.puts 'NO RETURN ERROR'
+            puts 'NO RETURN ERROR'
           end
           nil
         end
@@ -329,15 +297,16 @@ module ApexParser
         # Check Argument
         if evaluated_arguments.size !=  method.arguments.size
           # TODO: Error Handling
-          STDERR.puts "Argument Length Error!! #{evaluated_arguments.size} != #{method.arguments.size}"
+          puts "Argument Length Error!! #{evaluated_arguments.size} != #{method.arguments.size}"
           return
         end
 
         env = HashWithUpperCasedSymbolicKey.new
         evaluated_arguments.each_with_index do |evaluated_argument, idx|
           if method.arguments[idx].type != AnyObject && evaluated_argument.class != method.arguments[idx].type
+            binding.pry
             # TODO: Error Handling
-            STDERR.puts "Argument Type Error!! #{evaluated_argument.class} != #{method.arguments[idx].type}"
+            puts "Argument Type Error!! #{evaluated_argument.class} != #{method.arguments[idx].type}"
             return
           end
           variable_name = method.arguments[idx].name
@@ -366,19 +335,8 @@ module ApexParser
         node
       end
 
-      def visit_access(node)
-        receiver_node = node.receiver.accept(self)
-        key = node.key.accept(self)
-        receiver_node.instance_fields[:_records][key.value]
-      end
-
       def visit_name(node)
-        receiver_or_name, field_name = field_from_name(node)
-        if field_name
-          receiver_or_name.instance_fields[field_name]
-        else
-          current_scope[receiver_or_name]
-        end
+        current_scope[node.to_s]
       end
 
       def field_from_name(node)
@@ -387,45 +345,30 @@ module ApexParser
 
         # variable.field...field
         variable = current_scope[name]
-        if variable && names.size == 1
-          return [name, nil]
-        end
-        receiver = names[1..-2].reduce(variable) do |receiver, name|
+        receiver = names[1..-1].reduce(variable) do |receiver, name|
           break nil if receiver.nil?
-          receiver.instance_fields[name]
+          receiver.fields[name]
         end
-
-
-        if receiver && receiver.instance_fields[names.last]
-          return [receiver, names.last]
-        end
+        return receiver unless receiver.nil?
 
         # this_field.field...field
-        field = current_scope[:this].instance_fields[name]
-        if field && names.size == 1
-          return [current_scope[:this], name]
-        end
-        receiver = names[1..-2].reduce(field) do |receiver, name|
+        field = current_scope[:this].fields[name]
+        receiver = names[1..-1].reduce(field) do |receiver, name|
           break nil if receiver.nil?
-          receiver.instance_fields[name]
+          receiver.fields[name]
         end
-
-        if receiver && receiver.instance_fields[names.last]
-          return [receiver, names.last]
-        end
+        return receiver unless receiver.nil?
 
         # class.static_field...field
         if names.length > 1
           apex_class = ApexClassTable[name]
           static_method_name = names[1]
           static_method = apex_class.static_fields[static_method_name]
-          receiver = names[1..-2].reduce(static_method) do |receiver, name|
+          receiver = names[1..-1].reduce(static_method) do |receiver, name|
             break nil if receiver.nil?
-            receiver.instance_fields[name]
+            receiver.fields[name]
           end
-          if receiver && receiver.instance_fields[names.last]
-            return [receiver, names.last]
-          end
+          return receiver unless receiver.nil?
         end
 
         # name_space.class.static_field...field
@@ -434,13 +377,11 @@ module ApexParser
           apex_class_name = names[1]
           apex_class = namespace[apex_class_name]
           static_method = names[2]
-          receiver = names[2..-2].reduce(apex_class[static_method]) do |receiver, name|
+          receiver = names[2..-1].reduce(apex_class[static_method]) do |receiver, name|
             break nil if receiver.nil?
-            receiver.instance_fields[name]
+            receiver.fields[name]
           end
-          if receiver && receiver.instance_fields[names.last]
-            return [receiver, names.last]
-          end
+          return receiver unless receiver.nil?
         end
       end
 
@@ -456,7 +397,7 @@ module ApexParser
           variable = current_scope[name]
           receiver = names[1..-1].reduce(variable) do |receiver, name|
             break nil if receiver.nil?
-            receiver.instance_fields[name]
+            receiver.fields[name]
           end
 
           method_node = receiver.apex_class_node.instance_methods[method_name]
@@ -496,7 +437,7 @@ module ApexParser
             static_field = apex_class.static_fields[static_method]
             receiver = names[2..-1].reduce(static_field) do |receiver, name|
               break nil if receiver.nil?
-              receiver.instance_fields[name]
+              receiver.fields[name]
             end
             unless receiver.nil? && apex_class.instance_methods[method_name]
               return receiver
@@ -512,25 +453,12 @@ module ApexParser
           static_method_name = apex_class[names[2]]
           receiver = names[2..-1].reduce(static_method_name) do |receiver, name|
             break nil if receiver.nil?
-            receiver.instance_fields[name]
+            receiver.fields[name]
           end
           unless receiver.nil? && apex_class.instance_methods[method_name]
             return receiver
           end
         end
-      end
-
-      def visit_switch(node)
-      end
-
-      def visit_when(node)
-      end
-
-      def visit_dml(node)
-      end
-
-      def visit_trigger(node)
-        TriggerTable.register(node.name, node)
       end
 
       def visit_object(node)

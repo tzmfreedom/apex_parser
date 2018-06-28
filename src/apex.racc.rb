@@ -5,12 +5,12 @@ token INTEGER IDENT ASSIGN SEMICOLON MUL DIV MOD ADD SUB DOUBLE
   RETURN DOT STRING REM_IN REM_OUT COMMENT ANNOTATION INSERT DELETE
   UNDELETE UPDATE UPSERT BEFORE AFTER TRIGGER ON WITH WITHOUT SHARING
   OVERRIDE STATIC FINAL NEW GET SET EXTENDS IMPLEMENTS ABSTRACT VIRTUAL
-  INSTANCE_OF TRUE FALSE IF ELSE FOR WHILE COLON
+  INSTANCEOF TRUE FALSE IF ELSE FOR WHILE COLON
   LESS_THAN LESS_THAN_EQUAL NOT_EQUAL EQUAL GREATER_THAN GREATER_THAN_EQUAL
   NULL CONTINUE BREAK SELECT FROM
   LS_BRACE RS_BRACE TRY CATCH INCR DECR
   LEFT_SHIFT RIGHT_SHIFT
-  AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION
+  AND OR TILDE CONDITIONAL_AND CONDITIONAL_OR QUESTION SWITCH WHEN
 
 rule
   root_statements : class_or_trigger { result = [val[0]] }
@@ -107,12 +107,29 @@ modifier : ANNOTATION
          | WITH SHARING { result = ['with_sharing', get_lineno(val, 0)] }
          | WITHOUT SHARING { result = ['without_sharing', get_lineno(val, 0)] }
 
-trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements RC_BRACE
-
+trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE before_after_arguments R_BRACE LC_BRACE statements RC_BRACE
+                     {
+                       result = AST::Trigger.new(
+                         name: value(val, 1),
+                         object: value(val, 3),
+                         arguments: val[5],
+                         statements: val[8]
+                       )
+                     }
+  before_after_arguments : before_after_argument { result = [val[0]] }
+                         | before_after_arguments COMMA before_after_argument { result = val[0].push(val[2]) }
+  before_after_argument : BEFORE dml { result = AST::TriggerTiming.new(timing: :before, dml: value(val, 1)) }
+                        | AFTER dml { result = AST::TriggerTiming.new(timing: :after, dml: value(val, 1)) }
+  dml : INSERT
+      | UPDATE
+      | UPSERT
+      | DELETE
+      | UNDELETE
   statements : statement { result = [val[0]] }
              | statements statement { result = val[0].push(val[1]) }
   statement : variable_declaration
             | if_statement
+            | switch_statement
             | for_statement
             | return_statement
             | break_statement
@@ -121,6 +138,7 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
             | comment
             | try_statement
             | expression_statement
+            | dml_statement
 
   expression_statement : statement_expression SEMICOLON
   statement_expression : assignment
@@ -133,12 +151,15 @@ trigger_declaration : TRIGGER IDENT ON IDENT L_BRACE R_BRACE LC_BRACE statements
   try_statement : TRY statements CATCH L_BRACE R_BRACE LC_BRACE statements RC_BRACE
 
   array_access : name LS_BRACE expression RS_BRACE
-               { result = AST::VariableNode.new(name: value(val, 0), index: val[2]) }
+               { result = AST::ArrayAccess.new(receiver: value(val, 0), key: val[2]) }
                | primary_expression LS_BRACE expression RS_BRACE
+               { result = AST::ArrayAccess.new(receiver: val[0], key: val[2]) }
   field_access : primary_expression DOT simple_name { result = val }
 empty_or_expression :
                     | expression
   expression : assignment_expression
+             | instanceof_expression
+  instanceof_expression : name INSTANCEOF name
 assignment_expression  : conditional_expression
                        | assignment
                        | soql_expression
@@ -298,6 +319,17 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                           | else_statements
   else_statements : ELSE LC_BRACE statements RC_BRACE { result = val[2] }
                  | ELSE statement { result = [val[1]] }
+  switch_statement : SWITCH ON expression LC_BRACE when_statements RC_BRACE
+                   { result = AST::Switch.new(expression: val[2], statements: val[4]) }
+  when_statements : when_statement { result = [val[0]] }
+                  | when_statements when_statement { result = val[0].push(val[1]) }
+  when_statement : WHEN when_argument LC_BRACE statements RC_BRACE
+                  { result = AST::When.new(condition: val[1], statements: val[3]) }
+  when_argument : ELSE { result = :else }
+                | name simple_name
+                | when_literals
+  when_literals : literal { result = [val[0]] }
+                | when_literals COMMA literal { result = val[0].push(val[2]) }
   for_statement : FOR L_BRACE empty_or_variable_declaration SEMICOLON empty_or_expression SEMICOLON empty_or_expression R_BRACE LC_BRACE statements RC_BRACE
                   { result = AST::ForNode.new(init_statement: val[2], exit_condition: val[4], increment_statement: val[6], statements: val[9]) }
                   | FOR L_BRACE name simple_name COLON name R_BRACE LC_BRACE statements RC_BRACE
@@ -329,7 +361,7 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
   continue_statement : CONTINUE SEMICOLON { result = AST::ContinueNode.new }
   return_statement : RETURN SEMICOLON { result = AST::ReturnNode.new(expression: AST::NullNode.new) }
                    | RETURN expression SEMICOLON { result = AST::ReturnNode.new(expression: val[1]) }
-
+  dml_statement : dml name SEMICOLON { result = AST::DML.new(dml: value(val, 0), object: val[1]) }
   comment : COMMENT { result = AST::CommentNode.new(val[0]) }
           | REM_IN COMMENT REM_OUT { result = AST::CommentNode.new(val[1]) }
 end
