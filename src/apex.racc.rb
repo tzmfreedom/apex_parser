@@ -21,7 +21,7 @@ rule
                    | trigger_declaration
   # Class Declaration
 
-class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_implements LC_BRACE class_statements RC_BRACE
+class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_implements LC_BRACE empty_or_class_statements RC_BRACE
                   {
                     result = ApexClassInitializer.create(
                       modifiers: val[0],
@@ -38,6 +38,8 @@ class_declaration : empty_or_modifiers CLASS IDENT empty_or_extends empty_or_imp
                       | IMPLEMENTS implements { result = val[1] }
   implements : name { result = [val[0]] }
              | implements COMMA name { result = val[0].push(val[1]) }
+empty_or_class_statements :
+                          | class_statements
   class_statements : class_statement { result = [val[0]] }
                    | class_statements class_statement { result = val[0].push(val[1]) }
   class_statement : method_declaration
@@ -152,6 +154,7 @@ empty_or_statements :
                        | post_increment_expression
                        | post_decrement_expression
                        | method_invocation
+                       | new_expression
   try_statement : TRY statements CATCH L_BRACE R_BRACE LC_BRACE statements RC_BRACE
 
   array_access : name LS_BRACE expression RS_BRACE
@@ -305,9 +308,11 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                      | arguments
   arguments : expression { result = [val[0]] }
             | arguments COMMA expression { result = val[0].push(val[2]) }
-
-  type : name { result = AST::Type.new(name: val[0].to_s) }
-       | type generics { result = AST::Type.new(name: val[0].name, generics_arguments: val[1]) }
+  type : reference_type
+       | name LS_BRACE RS_BRACE
+reference_type : name { result = AST::Type.new(name: val[0].to_s) }
+               | generics_type
+  generics_type : name generics { result = AST::Type.new(name: val[0].name, generics_arguments: val[1]) }
   types : type { result = [val[0]] }
         | types COMMA type { result = val[0].push(val[2]) }
   generics : LESS_THAN types GREATER_THAN { result = val[1] }
@@ -324,15 +329,12 @@ post_decrement_expression : postfix_expression DECR { result = AST::OperatorNode
                    {
                      result = AST::SoqlNode.new(soql: val[0])
                    }
-  new_expression : NEW type empty_or_type_array initializer_statemenet
+  new_expression : NEW type initializer_statemenet
                  {
                    result = AST::NewNode.new(type: val[1], arguments: val[3])
                  }
   initializer_statemenet : L_BRACE empty_or_arguments R_BRACE { result = val[1] }
                          | LC_BRACE initializers RC_BRACE { result = val[1] }
-  empty_or_type_array :
-                      | LS_BRACE RS_BRACE
-                      | LS_BRACE INTEGER RS_BRACE
 
   initializers : initializer { result = [val[0]] }
                | initializers COMMA initializer { result = val[0].push(val[2]) }

@@ -18,6 +18,7 @@ module ApexParser
       other_modifiers  = HashWithUpperCasedSymbolicKey.new
       constructor      = nil
       access_modifier  = nil
+      statements ||= []
 
       statements.each do |statement|
         case statement
